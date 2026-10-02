@@ -1,0 +1,51 @@
+<!-- Fragmento servido só por GET /api/admin/painel com X-Admin-Token válido. -->
+<div class="cab-bloco">
+  <h2><i class="ico laranja"></i>Painel do administrador</h2>
+  <button class="btn branco pequeno" onclick="sairAdmin()">Sair do modo admin</button>
+</div>
+
+<div class="admin-grade">
+  <div class="cartao">
+    <h3>Clique no mapa define</h3>
+    <div class="segmento" role="radiogroup">
+      <label><input type="radio" name="cliqueModo" value="maquina" checked><span>Nova máquina</span></label>
+      <label><input type="radio" name="cliqueModo" value="posicao"><span>Minha posição</span></label>
+    </div>
+    <p class="dica">Em "Nova máquina", o clique marca um pino laranja com o local da máquina.</p>
+  </div>
+
+  <div class="cartao">
+    <h3>Nova máquina</h3>
+    <p class="dica">Local: <b id="m_local">clique no mapa</b></p>
+    <input id="m_nome" placeholder="Nome">
+    <input id="m_bairro" placeholder="Bairro">
+    <input id="m_end" placeholder="Endereço">
+    <button class="btn" onclick="novaMaquina()">Adicionar máquina</button>
+  </div>
+
+  <div class="cartao">
+    <h3>Novo cupom (nova fase)</h3>
+    <input id="c_marca" placeholder="Marca parceira">
+    <input id="c_desc" placeholder="Descrição">
+    <input id="c_custo" type="number" min="1" placeholder="Custo em pontos">
+    <button class="btn" onclick="novoCupom()">Adicionar cupom</button>
+  </div>
+
+  <div class="cartao">
+    <h3>Simular depósito</h3>
+    <p class="dica">Credita o usuário logado na máquina mais próxima.</p>
+    <select id="d_mat">{% for m, p in materiais.items() %}<option value="{{ m }}">{{ m|upper }} ({{ p }} pontos por item)</option>{% endfor %}</select>
+    <input id="d_qtd" type="number" min="1" value="3">
+    <button class="btn verde" onclick="depositar()">Depositar</button>
+  </div>
+
+  <div class="cartao largo">
+    <h3>Reciclagem por bairro</h3>
+    <div class="tabela"><table id="analise"></table></div>
+  </div>
+
+  <div class="cartao">
+    <h3>Itens por material</h3>
+    <div id="por_material"></div>
+  </div>
+</div>
