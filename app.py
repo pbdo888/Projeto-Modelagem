@@ -4,11 +4,12 @@ import os
 import re
 import secrets
 import sqlite3
+import uuid
 from datetime import date
 from functools import wraps
 
 from dotenv import load_dotenv
-from flask import Flask, g, jsonify, make_response, render_template, request, send_file, session
+from flask import Flask, g, jsonify, make_response, render_template, request, send_file, send_from_directory, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from db import DB_PATH, PONTOS_ITEM_MEDIO, PONTOS_MATERIAL, dist_km, init_db
@@ -21,6 +22,13 @@ app = Flask(__name__, template_folder=".")  # index.html fica na mesma pasta
 # Assina o cookie de sessão. Sem SECRET_KEY no .env, todos são deslogados a cada reinício.
 app.secret_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)
 app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
+
+# Cartazes enviados pelo admin (os iniciais ficam em static/cartazes, versionados)
+UPLOAD_ANUNCIOS = os.path.join("uploads", "anuncios")
+URL_ANUNCIOS = "/uploads/anuncios/"
+MAX_IMAGEM_MB = 5
+app.config["MAX_CONTENT_LENGTH"] = (MAX_IMAGEM_MB + 1) * 1024 * 1024  # imagem + campos de texto
+os.makedirs(UPLOAD_ANUNCIOS, exist_ok=True)
 init_db()
 gerar_planilha()
 
@@ -60,6 +68,11 @@ def one(sql, args=()):
 
 def erro(msg, code=400):
     return jsonify(erro=msg), code
+
+
+@app.errorhandler(413)
+def upload_grande(_):
+    return erro(f"imagem muito grande (máximo {MAX_IMAGEM_MB} MB)", 413)
 
 
 def admin_ok():
@@ -195,7 +208,7 @@ def index():
 @requer_admin
 def admin_painel():
     """O HTML do painel (formulários + estatísticas) só sai do servidor com o token válido."""
-    return render_template("admin_painel.html", materiais=PONTOS_MATERIAL)
+    return render_template("admin_painel.html", materiais=PONTOS_MATERIAL, max_mb=MAX_IMAGEM_MB)
 
 
 @app.get("/api/admin/planilha")
@@ -394,6 +407,139 @@ def resgatar(u):
                 (u["id"], cid, codigo, c["custo"]))
     con.commit()
     return jsonify(codigo=codigo)
+
+
+# ---------- notícias: anúncios com cartaz (carrossel) ----------
+def tipo_imagem(dados):
+    """Extensão pelo conteúdo do arquivo (não confia no nome nem no Content-Type). SVG fica de fora (pode ter script)."""
+    if dados.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if dados.startswith(b"\xff\xd8\xff"):
+        return "jpg"
+    if dados[:6] in (b"GIF87a", b"GIF89a"):
+        return "gif"
+    if dados[:4] == b"RIFF" and dados[8:12] == b"WEBP":
+        return "webp"
+    return None
+
+
+def validar_anuncio(d):
+    titulo = texto(d, "titulo", "o título", maximo=120)
+    if len(titulo) < 3:
+        raise ValueError("o título precisa ter pelo menos 3 caracteres")
+    try:
+        ordem = int(d.get("ordem") or 0)
+    except (TypeError, ValueError):
+        raise ValueError("ordem inválida")
+    if not 0 <= ordem <= 9999:
+        raise ValueError("a ordem deve ficar entre 0 e 9999")
+    return {
+        "titulo": titulo,
+        "texto": texto(d, "texto", "o texto do anúncio", maximo=5000),
+        "ordem": ordem,
+        "ativo": 1 if str(d.get("ativo", "1")).lower() in ("1", "true", "on", "sim") else 0,
+    }
+
+
+def salvar_cartaz(obrigatorio):
+    """Grava o cartaz enviado em uploads/anuncios com nome aleatório e devolve o caminho público."""
+    arq = request.files.get("imagem")
+    if not arq or not arq.filename:
+        if obrigatorio:
+            raise ValueError("envie a imagem do cartaz")
+        return None
+    dados = arq.read()
+    if len(dados) > MAX_IMAGEM_MB * 1024 * 1024:
+        raise ValueError(f"imagem muito grande (máximo {MAX_IMAGEM_MB} MB)")
+    ext = tipo_imagem(dados)
+    if not ext:
+        raise ValueError("formato de imagem inválido (use PNG, JPG, WebP ou GIF)")
+    nome = f"{uuid.uuid4().hex}.{ext}"
+    with open(os.path.join(UPLOAD_ANUNCIOS, nome), "wb") as f:
+        f.write(dados)
+    return URL_ANUNCIOS + nome
+
+
+def apagar_cartaz(url):
+    """Só apaga arquivos enviados pelo admin; os cartazes iniciais (static/) ficam."""
+    if url and url.startswith(URL_ANUNCIOS):
+        try:
+            os.remove(os.path.join(UPLOAD_ANUNCIOS, os.path.basename(url)))
+        except OSError:
+            pass
+
+
+@app.get(URL_ANUNCIOS + "<path:nome>")
+def cartaz(nome):
+    return send_from_directory(os.path.abspath(UPLOAD_ANUNCIOS), nome, max_age=86400)
+
+
+@app.get("/api/anuncios")
+def listar_anuncios():
+    return jsonify(rows("SELECT id, titulo, texto, imagem, criado_em FROM anuncios WHERE ativo = 1 "
+                        "ORDER BY ordem, id DESC"))
+
+
+@app.get("/api/anuncios/<int:aid>")
+def ver_anuncio(aid):
+    a = one("SELECT id, titulo, texto, imagem, criado_em FROM anuncios WHERE id = ? AND ativo = 1", (aid,))
+    return jsonify(a) if a else erro("anúncio não encontrado", 404)
+
+
+@app.get("/api/admin/anuncios")
+@requer_admin
+def listar_anuncios_admin():
+    return jsonify(rows("SELECT * FROM anuncios ORDER BY ordem, id DESC"))
+
+
+@app.post("/api/anuncios")
+@requer_admin
+def criar_anuncio():
+    try:
+        dados = validar_anuncio(request.form)
+        dados["imagem"] = salvar_cartaz(obrigatorio=True)
+    except ValueError as e:
+        return erro(str(e))
+    con = get_db()
+    cur = con.execute(f"INSERT INTO anuncios ({', '.join(dados)}) VALUES ({', '.join('?' * len(dados))})",
+                      list(dados.values()))
+    con.commit()
+    return jsonify(one("SELECT * FROM anuncios WHERE id = ?", (cur.lastrowid,))), 201
+
+
+@app.put("/api/anuncios/<int:aid>")
+@requer_admin
+def editar_anuncio(aid):
+    antigo = one("SELECT * FROM anuncios WHERE id = ?", (aid,))
+    if not antigo:
+        return erro("anúncio não encontrado", 404)
+    try:
+        dados = validar_anuncio(request.form)
+        nova = salvar_cartaz(obrigatorio=False)  # sem imagem nova, mantém o cartaz atual
+    except ValueError as e:
+        return erro(str(e))
+    if nova:
+        dados["imagem"] = nova
+    con = get_db()
+    con.execute(f"UPDATE anuncios SET {', '.join(c + ' = ?' for c in dados)}, atualizado_em = CURRENT_TIMESTAMP "
+                "WHERE id = ?", [*dados.values(), aid])
+    con.commit()
+    if nova:
+        apagar_cartaz(antigo["imagem"])
+    return jsonify(one("SELECT * FROM anuncios WHERE id = ?", (aid,)))
+
+
+@app.delete("/api/anuncios/<int:aid>")
+@requer_admin
+def excluir_anuncio(aid):
+    a = one("SELECT imagem FROM anuncios WHERE id = ?", (aid,))
+    if not a:
+        return erro("anúncio não encontrado", 404)
+    con = get_db()
+    con.execute("DELETE FROM anuncios WHERE id = ?", (aid,))
+    con.commit()
+    apagar_cartaz(a["imagem"])
+    return jsonify(ok=True)
 
 
 # ---------- análise por localização ----------

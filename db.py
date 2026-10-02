@@ -99,7 +99,118 @@ CREATE TABLE IF NOT EXISTS coletas (
   itens INTEGER NOT NULL,
   criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS anuncios (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  titulo TEXT NOT NULL,
+  texto TEXT NOT NULL,
+  imagem TEXT NOT NULL,  -- caminho público do cartaz (/static/cartazes/... ou /uploads/anuncios/...)
+  ativo INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1)),
+  ordem INTEGER NOT NULL DEFAULT 0,  -- menor aparece antes no carrossel
+  criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
+
+# Cartazes iniciais do carrossel de Notícias: os slides da apresentação ReciclaVerde.pptx,
+# exportados para static/cartazes/reciclaverde-NN.png (na mesma ordem).
+ANUNCIOS_INICIAIS = [
+    ("ReciclaVerde: reciclar vira desconto",
+     "Máquinas inteligentes pela cidade, pontos por item reciclado e cupons de marcas parceiras.\n\n"
+     "O ReciclaVerde nasceu no Projeto de Modelagem de Sistemas (2026) com uma ideia simples: "
+     "quem leva a embalagem até a máquina ganha pontos, e os pontos viram desconto nas lojas parceiras."),
+    ("O Brasil gera muito e recicla pouco",
+     "De cada 100 kg de resíduo urbano, menos de 9 kg seguem para a reciclagem de materiais.\n\n"
+     "• 81,6 milhões de toneladas de resíduos urbanos foram gerados em 2024: 384 kg por habitante.\n"
+     "• Só 8,7% vão para a reciclagem mecânica. Quase dois terços chegam pelas mãos de catadores informais.\n"
+     "• Na cidade de São Paulo, só 2,85% do lixo recolhido vem da coleta seletiva. A meta era 10%.\n\n"
+     "Fontes: Abrema, Panorama dos Resíduos Sólidos 2025 (ano-base 2024); "
+     "Faculdade de Saúde Pública da USP (dados de 2024)."),
+    ("A barreira é acesso e incentivo",
+     "99% dos brasileiros reconhecem que reciclar é importante. A intenção existe: falta um ponto de entrega "
+     "no caminho e um motivo imediato para usá-lo.\n\n"
+     "Motivos de quem não recicla:\n"
+     "• 42%: falta de acesso à coleta seletiva\n"
+     "• 21%: preguiça\n"
+     "• 18%: falta de informação sobre como reciclar\n\n"
+     "Em outra pesquisa, 39% dos que não reciclam dizem não conhecer um ponto de coleta perto de casa.\n\n"
+     "Fontes: pesquisa nacional com 2.010 entrevistas em 112 municípios, via Jovem Pan (dez. 2024); "
+     "Samsung e MindMiners (2022)."),
+    ("Onde há recompensa, a reciclagem acontece",
+     "97,3% das latas de alumínio vendidas no Brasil em 2024 foram recicladas: 33,9 bilhões de unidades. "
+     "A lata vale dinheiro na hora da entrega. O ReciclaVerde leva essa lógica às demais embalagens.\n\n"
+     "• Latas de alumínio (Brasil): 97,3%\n"
+     "• Embalagens com depósito (Alemanha): 96–99%\n"
+     "• Resíduos urbanos (Brasil): 8,7%\n"
+     "• Coleta seletiva (São Paulo): 2,85%\n\n"
+     "Fontes: Recicla Latas (2025); Agência Federal de Meio Ambiente da Alemanha, via Euronews (2026); "
+     "Abrema (2025); FSP-USP."),
+    ("Como o ReciclaVerde funciona",
+     "1. Deposita: a pessoa leva a embalagem à máquina mais próxima de casa.\n"
+     "2. Pontua: infravermelho e visão computacional identificam o material e creditam os pontos.\n"
+     "3. Avança: os pontos liberam fases no mapa de cupons, uma por marca parceira.\n"
+     "4. Resgata: o cupom vira desconto na loja e leva um cliente novo à marca.\n\n"
+     "Três peças trabalham juntas: a máquina (infravermelho e visão computacional), o aplicativo "
+     "(mapa, pontos e fases de cupons) e o painel (depósitos e resgates por bairro)."),
+    ("O protótipo já funciona",
+     "• Mapa de máquinas: MapLibre e OpenFreeMap, sem chave de API nem cartão.\n"
+     "• Mundo de cupons: seis fases; cada uma libera o cupom de uma marca.\n"
+     "• Painel e planilha: depósitos por bairro e planilha gerada a partir do banco.\n\n"
+     "Feito com Python (Flask), SQLite e HTML/JS puro. Nesta versão, a leitura da máquina é simulada."),
+    ("A máquina mais próxima de cada casa",
+     "A partir do endereço fixo do cadastro, o ReciclaVerde ordena as máquinas por proximidade usando a "
+     "distância em linha reta: d = √(Δlat² + Δlng²), convertida para km (1° ≈ 111 km).\n\n"
+     "• Simples: poucas operações aritméticas por máquina.\n"
+     "• Barato: sem API paga e sem GPS em tempo real.\n"
+     "• Privado: usa só o endereço fixo do cadastro.\n\n"
+     "É uma linha reta, não uma rota: serve para ordenar as máquinas por proximidade."),
+    ("O cupom já move o consumidor brasileiro",
+     "• 70% economizam com cupons todos os meses.\n"
+     "• 80% dizem que o cupom influencia onde vão comprar.\n"
+     "• 53% poupam mais de R$ 50 por mês com cupons.\n\n"
+     "No ReciclaVerde, a pessoa paga o cupom com embalagens, não com dinheiro.\n\n"
+     "Fidelidade no 1º trimestre de 2026: 306 milhões de cadastros em programas de fidelidade, "
+     "com R$ 6,3 bilhões de faturamento no trimestre.\n\n"
+     "Fontes: Serasa e Opinion Box (maio de 2026, 1.051 entrevistas); ABEMF, indicadores do 1º trimestre de 2026."),
+    ("A lei já exige coleta das marcas",
+     "• 2010, Lei 12.305 (PNRS): fabricantes, comerciantes e consumidores compartilham a responsabilidade "
+     "pelo ciclo de vida das embalagens.\n"
+     "• 2023, Decreto 11.413: certificados de crédito de reciclagem passam a comprovar a logística reversa.\n"
+     "• 2025, Decreto 12.688: plástico deve recuperar 32% das embalagens em 2026 e ter um ponto de entrega "
+     "a cada 10 mil habitantes até 2029.\n\n"
+     "Cada máquina é um ponto de entrega que registra item, material, data e local: dado rastreável para os "
+     "programas de logística reversa das marcas.\n\n"
+     "Fontes: Lei 12.305/2010; Decreto 11.413/2023; Decreto 12.688/2025 (texto oficial e análise de Felsberg Advogados)."),
+    ("O que a marca parceira ganha",
+     "O cupom leva quem recicla até a loja parceira do bairro.\n\n"
+     "• Clientes novos: quem recicla recebe um motivo para experimentar a marca pela primeira vez. "
+     "64% já compraram algo fora do planejado por causa de um cupom.\n"
+     "• Custo por venda: o desconto só é concedido quando a venda acontece, e cada resgate fica registrado. "
+     "73% já desistiram de uma compra por falta de cupom válido.\n"
+     "• Imagem ambiental: cada resgate liga a marca a um gesto concreto de reciclagem, com dados por bairro. "
+     "95% dizem priorizar empresas com práticas sustentáveis.\n\n"
+     "Fontes: Serasa e Opinion Box (maio de 2026); pesquisa encomendada pela APAS, divulgada na APAS Show 2023."),
+    ("O ecossistema e suas trocas",
+     "• Morador: entrega embalagens na máquina e recebe pontos e cupons de desconto.\n"
+     "• Marca parceira: entrega cupons e patrocínio de máquinas e recebe clientes novos e dados de reciclagem.\n"
+     "• Cooperativas: fazem a coleta e a triagem e recebem material já separado, em volume previsível.\n"
+     "• Cidade: oferece locais para as máquinas e ganha menos aterro e mais pontos de entrega.\n"
+     "• ReciclaVerde: fornece máquinas, aplicativo e painel e recebe taxa por resgate, patrocínio e material.\n\n"
+     "Papéis previstos no modelo de negócio; parcerias com marcas, cooperativas e prefeitura ainda a firmar."),
+    ("Receita e riscos do modelo",
+     "Receita prevista:\n"
+     "• Taxa por cupom resgatado, paga pela marca parceira.\n"
+     "• Patrocínio de máquina: mensalidade para a marca aparecer na máquina e no aplicativo.\n"
+     "• Material e créditos de reciclagem vendidos à indústria recicladora.\n\n"
+     "Riscos e respostas:\n"
+     "• Custo das máquinas: piloto pequeno, em locais de alto fluxo, com máquinas patrocinadas.\n"
+     "• Leitura ainda simulada: validar infravermelho e visão computacional em bancada antes do piloto.\n"
+     "• Dados pessoais (LGPD): endereço fixo, sem localização em tempo real; dados anônimos para as marcas.\n\n"
+     "Os valores ainda serão definidos com o levantamento de custos do projeto."),
+    ("Reciclar vira desconto. O desconto vira cliente.",
+     "Reciclar vira desconto. O desconto vira cliente. O cliente financia a próxima máquina.\n\n"
+     "Próximo passo: um piloto com máquinas e marcas parceiras em São Paulo.\n\n"
+     "Código do projeto: github.com/pbdo888/Projeto-Modelagem"),
+]
 
 
 def seed(con):
@@ -169,11 +280,21 @@ def migrar(con):
             (senha, nasc, sexo, ec, mor, logr, num, bairro, cep, lat, lng, email))
 
 
+def seed_anuncios(con):
+    con.executemany("INSERT INTO anuncios (titulo, texto, imagem, ordem) VALUES (?,?,?,?)", [
+        (titulo, texto, f"/static/cartazes/reciclaverde-{i:02d}.png", i)
+        for i, (titulo, texto) in enumerate(ANUNCIOS_INICIAIS, start=1)])
+
+
 def init_db():
     con = sqlite3.connect(DB_PATH)
+    # Os cartazes iniciais entram só quando a tabela é criada; se o admin excluir todos, não voltam.
+    sem_anuncios = not con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'anuncios'").fetchone()
     con.executescript(SCHEMA)
     if con.execute("SELECT COUNT(*) FROM maquinas").fetchone()[0] == 0:
         seed(con)
+    if sem_anuncios:
+        seed_anuncios(con)
     migrar(con)
     con.commit()
     con.close()

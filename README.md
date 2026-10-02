@@ -64,10 +64,12 @@ Hospede em Heroku, AWS, Replit ou similar. Mais profissional, mas requer configu
 
 ## Estrutura
 
-- `db.py`: esquema (usuarios, funcionarios, maquinas, cupons, depositos, resgates, coletas), migração e dados de exemplo
+- `db.py`: esquema (usuarios, funcionarios, maquinas, cupons, depositos, resgates, coletas, anuncios), migração e dados de exemplo
+- `static/cartazes/`: cartazes iniciais do carrossel de Notícias (slides da apresentação ReciclaVerde)
+- `uploads/anuncios/`: cartazes enviados pelo painel de admin (fora do git)
 - `app.py`: API REST e rota da página (Flask)
 - `planilha.py`: gera `planilhas/usuarios.xlsx` a partir do banco de dados (também roda sozinho: `python planilha.py`)
-- `index.html`: mapa interativo, cadastro/login, mundo de cupons
+- `index.html`: notícias (carrossel de cartazes), mapa interativo, cadastro/login, mundo de cupons
 - `admin_painel.html`: painel de administração, protegido por token
 - `requirements.txt`: dependências Python do projeto
 
@@ -92,6 +94,11 @@ Hospede em Heroku, AWS, Replit ou similar. Mais profissional, mas requer configu
   - `GET /api/analise`: análise de dados por localização
   - `GET /api/admin/painel`: interface do painel de admin (HTML)
   - `GET /api/admin/planilha`: baixar planilha de usuários
+  - `GET /api/admin/anuncios`: todos os anúncios (inclusive ocultos)
+  - `POST /api/anuncios`, `PUT /api/anuncios/<id>`, `DELETE /api/anuncios/<id>`: criar, editar e excluir anúncios
+    (multipart: `imagem`, `titulo`, `texto`, `ordem`, `ativo`; imagem PNG/JPG/WebP/GIF até 5 MB, conferida pelo conteúdo)
+- **Notícias (público):** `GET /api/anuncios` lista os anúncios publicados (carrossel) e `GET /api/anuncios/<id>`
+  traz um anúncio completo ("Saiba mais"). Os 13 slides da apresentação entram como cartazes iniciais na criação da tabela
 
 ## Análise por localização
 

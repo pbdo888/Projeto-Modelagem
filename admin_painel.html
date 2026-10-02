@@ -37,6 +37,34 @@
   </div>
 
   <div class="cartao largo">
+    <h3 id="an_form_titulo">Novo anúncio (Notícias)</h3>
+    <p class="dica">O cartaz aparece no carrossel de Notícias assim que for salvo. PNG, JPG, WebP ou GIF até {{ max_mb }} MB, de preferência em 16:9.</p>
+    <form id="formAnuncio" onsubmit="salvarAnuncio(event)" novalidate>
+      <label class="campo" for="an_imagem">Cartaz <small id="an_imagem_dica"></small></label>
+      <input id="an_imagem" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onchange="previaCartaz()">
+      <img id="an_previa" class="previa-cartaz" alt="Prévia do cartaz" hidden>
+      <label class="campo" for="an_titulo">Título</label>
+      <input id="an_titulo" maxlength="120" placeholder="Ex.: Nova máquina no Largo da Batata">
+      <label class="campo" for="an_texto">Texto completo <small>(aparece em "Saiba mais")</small></label>
+      <textarea id="an_texto" rows="6" maxlength="5000"></textarea>
+      <div class="grade-form">
+        <div><label class="campo" for="an_ordem">Ordem <small>(menor aparece antes)</small></label>
+          <input id="an_ordem" type="number" min="0" max="9999" value="0"></div>
+        <div><label class="check" style="margin-top:28px"><input type="checkbox" id="an_ativo" checked> <span>Publicado no carrossel</span></label></div>
+      </div>
+      <div class="acoes">
+        <button type="button" class="btn branco" id="an_cancelar" onclick="limparFormAnuncio()" hidden>Cancelar edição</button>
+        <button class="btn verde" id="an_salvar">Publicar anúncio</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="cartao largo">
+    <h3>Anúncios cadastrados</h3>
+    <div id="listaAnuncios" class="tiles"></div>
+  </div>
+
+  <div class="cartao largo">
     <h3>Reciclagem por bairro</h3>
     <div class="tabela"><table id="analise"></table></div>
   </div>
