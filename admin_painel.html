@@ -12,7 +12,7 @@
     <p class="dica">Credita o usuário logado na máquina mais próxima da casa dele.</p>
     <select id="d_mat">{% for m, p in materiais.items() %}<option value="{{ m }}">{{ m|upper }} ({{ p }} pontos por item)</option>{% endfor %}</select>
     <input id="d_qtd" type="number" min="1" value="3" aria-label="Quantidade de itens">
-    <button class="btn lima" data-acao="depositar">Depositar</button>
+    <button class="btn verde" data-acao="depositar">Depositar</button>
   </div>
 
   <div class="cartao">
@@ -58,7 +58,7 @@
       </div>
       <div class="acoes">
         <button type="button" class="btn branco" id="an_cancelar" data-acao="cancelar-anuncio" hidden>Cancelar edição</button>
-        <button class="btn lima" id="an_salvar">Publicar anúncio</button>
+        <button class="btn verde" id="an_salvar">Publicar anúncio</button>
       </div>
     </form>
   </div>

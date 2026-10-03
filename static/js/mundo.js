@@ -23,7 +23,7 @@ function criarMundo({aoResgatar, aoEntrar, aoAvancar = () => {}}) {
   const $m = id => document.getElementById(id);
   const raiz = $m('mundo'), cena = $m('cena'), palco = $m('palco'), svg = $m('trilhaSvg'), camadaNos = $m('nos');
   const avatar = $m('avatar'), salto = $m('salto'), sombraPos = $m('sombraPos'), balao = $m('balao'), btnPular = $m('pular');
-  const PASSO = 150, MARGEM = 90, ALTURA = 340, BASE = 178, AMPL = 56, RAIO = 30, GAP = 17;
+  const PASSO = 140, MARGEM = 80, ALTURA = 300;
   let pts = [], segs = [], fases = [], dados = null, atual = 0, alvo = 0;
   let desenhado = false, pendente = null, emSequencia = false, pulando = false, aberto = null;
   const rodando = new Set(), esperas = new Set();
@@ -31,7 +31,7 @@ function criarMundo({aoResgatar, aoEntrar, aoAvancar = () => {}}) {
   salto.innerHTML = SPRITE(36);
   const visivel = () => cena.clientWidth > 0;
   const logado = () => !!dados?.usuario;
-  const posicao = i => ({x: MARGEM + i * PASSO, y: BASE - Math.round(Math.sin(i * 1.1 + .4) * AMPL)});
+  const posicao = i => ({x: MARGEM + i * PASSO, y: 150 - Math.round(Math.sin(i * 1.15) * 55)});
 
   // Catmull-Rom -> Bézier: curva suave passando por todos os nós
   function curva(i) {
@@ -64,7 +64,7 @@ function criarMundo({aoResgatar, aoEntrar, aoAvancar = () => {}}) {
   }
 
   const noEl = k => camadaNos.querySelector(`.no[data-k="${k}"]`);
-  const posicionarAvatar = p => { avatar.style.transform = `translate(${p.x - 20}px, ${p.y - 86}px)`; };   // pés na borda do nó
+  const posicionarAvatar = p => { avatar.style.transform = `translate(${p.x - 20}px, ${p.y - 81}px)`; };   // pés na borda do nó
   const centralizar = (x, suave) => cena.scrollTo({left: x - cena.clientWidth / 2, behavior: suave && !semMovimento() ? 'smooth' : 'auto'});
 
   // ---- desenho ----
@@ -72,29 +72,20 @@ function criarMundo({aoResgatar, aoEntrar, aoAvancar = () => {}}) {
     fecharBalao(true);
     const n = fases.length;
     pts = Array.from({length: n + 1}, (_, i) => posicao(i));
-    const largura = MARGEM + n * PASSO + 190;
+    const largura = pts[n].x + 140;
     palco.style.width = largura + 'px';
     svg.setAttribute('width', largura);
     svg.setAttribute('viewBox', `0 0 ${largura} ${ALTURA}`);
+    // por trecho: borda bege, trecho percorrido (amarelo, pathLength=1 para desenhar com dashoffset) e pontinhos
     svg.innerHTML = pts.slice(0, -1).map((_, i) => {
       const d = curva(i);
-      return `<g class="seg ${i < de ? 'aberto' : ''}" data-s="${i}"><path class="seg-trancado" d="${d}"/>
-        <g class="seg-aberto"><path class="borda" d="${d}"/><path class="miolo" d="${d}"/></g><g class="pontos"></g></g>`;
+      return `<g class="seg ${i < de ? 'aberto' : ''}" data-s="${i}"><path class="borda" d="${d}"/>
+        <path class="feito" d="${d}" pathLength="1"/><path class="tracejado" d="${d}"/></g>`;
     }).join('');
-    segs = [...svg.querySelectorAll('.seg-trancado')];
-    svg.querySelectorAll('.seg').forEach((g, i) => {   // pontinhos igualmente espaçados, longe dos nós
-      const s = segs[i], L = s.getTotalLength(), ini = RAIO + 8, util = L - 2 * ini;
-      const q = Math.max(2, Math.floor(util / GAP) + 1);
-      let h = '';
-      for (let j = 0; j < q; j++) {
-        const p = s.getPointAtLength(ini + j * util / (q - 1));
-        h += `<circle class="ponto" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.4"/>`;
-      }
-      g.querySelector('.pontos').innerHTML = h;
-    });
+    segs = [...svg.querySelectorAll('.borda')];
 
     let nuvens = '';
-    for (let i = 0; i * 250 < largura; i++) nuvens += `<div class="nuvem" style="left:${40 + i * 250 + (i % 3) * 40}px;top:${18 + (i % 2) * 30}px"></div>`;
+    for (let i = 0; i * 260 < largura; i++) nuvens += `<div class="nuvem" style="left:${40 + i * 260 + (i % 3) * 35}px;top:${24 + (i % 2) * 34}px"></div>`;
     $m('nuvens').innerHTML = nuvens;
 
     camadaNos.innerHTML =
@@ -110,7 +101,7 @@ function criarMundo({aoResgatar, aoEntrar, aoAvancar = () => {}}) {
           <span class="no-rotulo">${esc(f.marca)}</span>
           <span class="no-falta"></span></button>`;
       }).join('') +
-      `<div class="bandeira" style="left:${pts[n].x + 110}px;top:${pts[n].y - 100}px"></div>`;
+      `<div class="bandeira" style="left:${pts[n].x + 70}px"></div>`;
     desenhado = true;
     atual = de;
     rotular();
@@ -141,14 +132,11 @@ function criarMundo({aoResgatar, aoEntrar, aoAvancar = () => {}}) {
   // ---- desbloqueio: o caminho se preenche > o avatar anda > o cadeado abre ----
   function revelarSegmento(i) {
     const g = svg.querySelector(`.seg[data-s="${i}"]`);
-    g.classList.add('aberto');   // estado final já aplicado; as animações partem do estado anterior
+    g.classList.add('aberto');   // estado final já aplicado; a animação parte do estado anterior
     if (pulando || semMovimento()) return Promise.resolve();
-    const pontos = [...g.querySelectorAll('.ponto')];
-    const total = pontos.length * 45 + 320;
-    rodar(g.querySelector('.seg-aberto'), [{opacity: 0}, {opacity: 1}], {duration: total, easing: EASE.entra, fill: 'backwards'});
-    pontos.forEach((p, j) => rodar(p, [{opacity: 0, transform: 'scale(.3)'}, {opacity: 1, transform: 'scale(1)'}],
-                                   {duration: 320, delay: j * 45, easing: EASE.mola, fill: 'backwards'}));
-    return esperar(total * .75);   // o avatar sai antes do último ponto pousar (offset, não fila)
+    const dur = Math.min(900, Math.max(450, segs[i].getTotalLength() * 2.4));
+    rodar(g.querySelector('.feito'), [{strokeDashoffset: 1}, {strokeDashoffset: 0}], {duration: dur, easing: EASE.estado, fill: 'backwards'});
+    return esperar(dur * .75);   // o avatar sai antes de a linha chegar ao nó (offset, não fila)
   }
 
   function andarSegmento(i) {
@@ -200,7 +188,7 @@ function criarMundo({aoResgatar, aoEntrar, aoAvancar = () => {}}) {
   function soltarMoeda(p, atraso) {
     const m = document.createElement('div');
     m.className = 'moeda';
-    m.style.cssText = `left:${p.x}px;top:${p.y - 44}px`;
+    m.style.cssText = `left:${p.x}px;top:${p.y - 40}px`;
     palco.append(m);
     rodar(m, [{opacity: 0, transform: 'translateY(0) scale(.7) rotateY(0)'},
               {opacity: 1, offset: .2},
@@ -312,6 +300,7 @@ function criarMundo({aoResgatar, aoEntrar, aoAvancar = () => {}}) {
     const anterior = p.fase_atual ? p.fases[p.fase_atual - 1].custo : 0;
     const frac = !p.usuario ? 0 : prox ? (p.pontos_totais - anterior) / (prox.custo - anterior) : 1;
     $m('pBarra').style.transform = `scaleX(${Math.max(0, Math.min(1, frac))})`;
+    $m('pBarra').parentElement.hidden = !p.usuario || !n;
     $m('saldoMundo').hidden = !p.usuario;
     if (p.usuario) contar($m('pSaldo'), p.usuario.pontos);
   }

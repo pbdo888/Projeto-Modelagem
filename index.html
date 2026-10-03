@@ -11,6 +11,7 @@
 <link href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
 <link href="{{ url_for('static', filename='css/mccrea.css') }}" rel="stylesheet">
+<script>try { const t = localStorage.getItem("tema"); if (t) document.documentElement.dataset.tema = t; } catch {}</script>
 <script defer src="{{ url_for('static', filename='js/movimento.js') }}"></script>
 <script defer src="{{ url_for('static', filename='js/mundo.js') }}"></script>
 <script defer src="{{ url_for('static', filename='js/app.js') }}"></script>
@@ -21,52 +22,70 @@
     <span class="selo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 19H4.8a2 2 0 0 1-1.7-3l1.6-2.8M11 4.5l1-1.7a2 2 0 0 1 3.4 0l3 5.2M17 19h3.2a2 2 0 0 0 1.7-3l-1.3-2.2"/><path d="m13 16-2.5 3L13 22M5.5 9.5 4.7 13.3l3.8.8M16 6l3.7 1.9-1.9 3.6"/></svg></span>
     <span>McCrea</span>
   </a>
-  <span class="topo-titulo" id="topoTitulo">Início</span>
+  <button class="tema" id="btnTema" data-acao="tema" aria-label="Modo escuro" aria-pressed="false">
+    <svg class="sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+    <svg class="lua" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+  </button>
   <div class="auth" id="auth">
     <button class="btn branco" data-acao="entrar">Entrar</button>
-    <button class="btn lima" data-acao="cadastro">Criar conta</button>
+    <button class="btn verde" data-acao="cadastro">Criar conta</button>
   </div>
-  <button class="chip" id="chip" data-nav="perfil" hidden></button>
+  <button class="chip" id="chip" data-acao="secao" data-secao="secConta" hidden></button>
 </header>
 
 <main id="telas">
-  <!-- ===== Início: menu de blocos ===== -->
-  <section class="tela" id="tela-inicio" data-titulo="Início" aria-label="Início">
-    <div class="menu" id="menu">
-      <button class="bloco-menu bm-mundo" data-nav="fases" data-bloco="fases">
-        <span class="bm-cena" aria-hidden="true">
-          <svg class="estrada" viewBox="0 0 400 120" preserveAspectRatio="none"><path d="M-10 90 C 60 90 90 40 160 40 S 260 100 330 70 410 40 410 40" fill="none" stroke="#c99a4b" stroke-width="16" stroke-linecap="round"/><path d="M-10 90 C 60 90 90 40 160 40 S 260 100 330 70 410 40 410 40" fill="none" stroke="#f3dca2" stroke-width="11" stroke-linecap="round"/></svg>
-          <span class="avatar-mini" id="bmAvatar"></span>
-        </span>
-        <span class="bm-selo" id="bmMundoSelo" hidden>Nova fase!</span>
-        <span class="bm-rodape"><b>Mundo de cupons</b><small id="bmMundoTxt">Recicle para avançar pelas fases</small>
-          <span class="bm-barra"><i id="bmMundoBarra"></i></span></span>
-      </button>
-      <button class="bloco-menu bm-noticias" data-nav="noticias" data-bloco="noticias">
-        <img id="bmNoticiasImg" alt="" hidden>
-        <span class="bm-ico ciano"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h6"/></svg></span>
-        <span class="bm-rodape"><b>Notícias</b><small id="bmNoticiasTxt">Novidades da comunidade</small></span>
-      </button>
-      <button class="bloco-menu bm-mapa" data-nav="mapa" data-bloco="mapa">
-        <span class="bm-ico lima"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg></span>
-        <b>Mapa</b><small id="bmMapaTxt">Máquinas da cidade</small>
-      </button>
-      <button class="bloco-menu bm-perfil" data-nav="perfil" data-bloco="perfil">
-        <span class="bm-avatar" id="bmPerfilAvatar"></span>
-        <b id="bmPerfilNome">Sua conta</b><small id="bmPerfilTxt">Entre ou crie sua conta</small>
-      </button>
-      <div class="bloco-menu bm-como" aria-label="Como funciona">
-        <div class="passo-como"><span class="num">1</span><span><b>Recicle</b><small class="dica">PET, latas, vidro e papel</small></span></div>
-        <span class="seta-como" aria-hidden="true">›</span>
-        <div class="passo-como"><span class="num">2</span><span><b>Ganhe pontos</b><small class="dica">a cada item na máquina</small></span></div>
-        <span class="seta-como" aria-hidden="true">›</span>
-        <div class="passo-como"><span class="num">3</span><span><b>Libere cupons</b><small class="dica">fase a fase, marca a marca</small></span></div>
+  <!-- ===== Início: mapa, conta, máquinas perto de casa e mundo de cupons ===== -->
+  <section class="tela inicio-grade" id="tela-inicio" data-titulo="Início" aria-label="Início">
+    <section class="bloco mapa-moldura" id="secMapa" aria-labelledby="tMapa">
+      <div class="cab-bloco">
+        <h2 id="tMapa"><i class="ico"></i>Mapa de máquinas</h2>
+        <div class="legenda"><span><i style="background:#1a73e8"></i>Sua casa</span><span><i style="background:#2fb24c"></i>Máquina</span></div>
       </div>
-      <button class="bloco-menu bm-admin" id="bmAdmin" data-acao="admin" data-bloco="admin">
-        <span class="bm-ico cinza"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
-        <b>Admin</b><small id="bmAdminTxt">Requer token</small>
-      </button>
+      <div id="map"><div class="mapa-vazio">Carregando o mapa…</div></div>
+    </section>
+
+    <div class="lado">
+      <section class="bloco" id="secConta" aria-label="Sua conta">
+        <div id="login" class="boas-vindas">
+          <div class="mini" id="miniBoasVindas"></div>
+          <h2>Bem-vindo ao McCrea</h2>
+          <p class="dica">Recicle nas nossas máquinas, ganhe pontos e libere cupons de marcas parceiras.</p>
+          <button class="btn verde largo" data-acao="cadastro">Criar conta grátis</button>
+          <button class="btn branco largo" data-acao="entrar">Já tenho conta: Entrar</button>
+        </div>
+        <div id="perfil" hidden></div>
+      </section>
+
+      <section class="bloco" aria-labelledby="tPerto">
+        <h2 id="tPerto" style="margin-bottom:12px"><i class="ico"></i>Máquinas perto de casa</h2>
+        <div id="proxima" class="dica">Entre ou crie sua conta para ver as máquinas mais próximas do seu endereço.</div>
+      </section>
     </div>
+
+    <section class="bloco mundo" id="mundo" aria-labelledby="mundoTitulo">
+      <div class="cab-bloco">
+        <h2 id="mundoTitulo"><i class="ico amarelo"></i>Mundo de cupons</h2>
+        <span class="dica" style="margin:0" id="mundoResumo"></span>
+      </div>
+      <div class="cena" id="cena">
+        <div class="palco" id="palco">
+          <div class="nuvens" id="nuvens"></div>
+          <svg class="trilha-svg" id="trilhaSvg" height="300" aria-hidden="true"></svg>
+          <div id="nos"></div>
+          <div class="avatar" id="avatar">
+            <div class="avatar-sombra-pos" id="sombraPos"><div class="avatar-sombra"></div></div>
+            <div class="avatar-flutua"><div class="avatar-salto" id="salto"></div></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn branco pequeno pular" id="pular">Pular animação</button>
+      <div class="balao" id="balao" role="group" aria-label="Detalhes da fase"></div>
+      <div class="progresso">
+        <div class="progresso-txt"><b id="pTitulo"></b><small id="pSub"></small><div class="barra"><i id="pBarra"></i></div></div>
+        <div class="saldo" id="saldoMundo"><b id="pSaldo">0</b><small>pontos de saldo</small></div>
+      </div>
+      <p class="sr" aria-live="polite" id="anunciador"></p>
+    </section>
   </section>
 
   <!-- ===== Notícias ===== -->
@@ -87,73 +106,6 @@
     </div>
   </section>
 
-  <!-- ===== Mapa ===== -->
-  <section class="tela" id="tela-mapa" data-titulo="Mapa" aria-labelledby="tMapa" hidden>
-    <div class="tela-cab">
-      <button class="voltar" data-nav="inicio" aria-label="Voltar ao início"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg></button>
-      <h1 id="tMapa">Mapa de máquinas</h1>
-    </div>
-    <div class="mapa-grade">
-      <div class="bloco mapa-moldura">
-        <div class="cab-bloco">
-          <h2><i class="ico"></i>Cidade</h2>
-          <div class="legenda"><span><i style="background:#1a73e8"></i>Sua casa</span><span><i style="background:#2fb24c"></i>Máquina</span></div>
-        </div>
-        <div id="map"><div class="mapa-vazio">Carregando o mapa…</div></div>
-      </div>
-      <div class="bloco">
-        <h2 style="margin-bottom:12px"><i class="ico lima"></i>Perto de casa</h2>
-        <div id="proxima" class="dica">Entre ou crie sua conta para ver as máquinas mais próximas do seu endereço.</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== Fases (mundo de cupons) ===== -->
-  <section class="tela" id="tela-fases" data-titulo="Fases" aria-labelledby="mundoTitulo" hidden>
-    <div class="tela-cab">
-      <button class="voltar" data-nav="inicio" aria-label="Voltar ao início"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg></button>
-      <h1 id="mundoTitulo">Mundo de cupons</h1>
-      <span class="dica" id="mundoResumo"></span>
-    </div>
-    <div class="bloco mundo" id="mundo">
-      <div class="cena" id="cena">
-        <div class="palco" id="palco">
-          <div class="colinas"></div><div class="chao"></div><div class="agua"></div>
-          <div class="nuvens" id="nuvens"></div>
-          <svg class="trilha-svg" id="trilhaSvg" height="340" aria-hidden="true"></svg>
-          <div id="nos"></div>
-          <div class="avatar" id="avatar">
-            <div class="avatar-sombra-pos" id="sombraPos"><div class="avatar-sombra"></div></div>
-            <div class="avatar-flutua"><div class="avatar-salto" id="salto"></div></div>
-          </div>
-        </div>
-      </div>
-      <button class="btn branco pequeno pular" id="pular">Pular animação</button>
-      <div class="balao" id="balao" role="group" aria-label="Detalhes da fase"></div>
-      <div class="progresso">
-        <div class="progresso-txt"><b id="pTitulo"></b><small id="pSub"></small><div class="barra"><i id="pBarra"></i></div></div>
-        <div class="saldo" id="saldoMundo"><b id="pSaldo">0</b><small>pontos de saldo</small></div>
-      </div>
-      <p class="sr" aria-live="polite" id="anunciador"></p>
-    </div>
-  </section>
-
-  <!-- ===== Perfil ===== -->
-  <section class="tela" id="tela-perfil" data-titulo="Sua conta" aria-labelledby="tPerfil" hidden>
-    <div class="tela-cab">
-      <button class="voltar" data-nav="inicio" aria-label="Voltar ao início"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg></button>
-      <h1 id="tPerfil">Sua conta</h1>
-    </div>
-    <div class="bloco boas-vindas" id="login">
-      <div class="mini" id="miniBoasVindas"></div>
-      <h2>Bem-vindo ao McCrea</h2>
-      <p class="dica">Recicle nas nossas máquinas, ganhe pontos e libere cupons de marcas parceiras.</p>
-      <button class="btn lima largo" data-acao="cadastro">Criar conta grátis</button>
-      <button class="btn branco largo" data-acao="entrar">Já tenho conta: Entrar</button>
-    </div>
-    <div class="perfil-grade" id="perfil" hidden></div>
-  </section>
-
   <!-- ===== Admin: o conteúdo vem de /api/admin/painel só com token válido ===== -->
   <section class="tela" id="tela-admin" data-titulo="Administração" aria-labelledby="tAdmin" hidden>
     <div class="tela-cab">
@@ -166,10 +118,10 @@
 </main>
 
 <nav class="dock" aria-label="Navegação">
-  <button data-nav="inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>Início</button>
+  <button data-acao="casa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>Casa</button>
   <button data-nav="noticias"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h6"/></svg>Notícias</button>
-  <button data-nav="mapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>Mapa</button>
-  <button data-nav="fases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7L12 3Z"/></svg>Fases</button>
+  <button data-acao="secao" data-secao="secMapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>Mapa</button>
+  <button data-acao="secao" data-secao="mundo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7L12 3Z"/></svg>Fases</button>
   <button id="dockAdmin" data-acao="admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Admin</button>
 </nav>
 
@@ -193,7 +145,7 @@
 </dialog>
 
 <dialog id="dlgCadastro" class="grande">
-  <h2 id="cadTitulo"><i class="ico lima"></i>Criar conta</h2>
+  <h2 id="cadTitulo"><i class="ico verde"></i>Criar conta</h2>
   <ol class="passos" id="passos"><li>Conta</li><li>Sobre você</li><li>Endereço</li></ol>
   <p class="msg" aria-live="polite"></p>
   <form id="formCadastro" novalidate>
@@ -257,7 +209,7 @@
     <div class="acoes">
       <button type="button" class="link" data-acao="fechar" style="margin-right:auto">Cancelar</button>
       <button type="button" class="btn branco" id="btnVoltar" data-acao="passo-voltar">Voltar</button>
-      <button class="btn lima" id="btnAvancar">Continuar</button>
+      <button class="btn verde" id="btnAvancar">Continuar</button>
     </div>
   </form>
 </dialog>
@@ -284,7 +236,7 @@
 </dialog>
 
 <dialog id="dlgCodigo">
-  <h2><i class="ico lima"></i>Cupom resgatado!</h2>
+  <h2><i class="ico verde"></i>Cupom resgatado!</h2>
   <p class="dica" id="codigoMarca"></p>
   <div class="codigo" id="codigo"></div>
   <div class="acoes"><button class="btn" data-acao="fechar">Fechar</button></div>

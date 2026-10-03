@@ -51,17 +51,15 @@ const mundo = criarMundo({
   aoAvancar: n => {   // fase que o usuário já viu o avatar alcançar
     if (!user) return;
     guardar('fase_' + user.id, n);
-    atualizarBlocoMundo();
   },
 });
 
 /* =====================================================================
-   Telas: menu de blocos + navegação (hash) com View Transitions
+   Telas: início (mapa + conta + mundo), notícias e admin, com View Transitions
    ===================================================================== */
-const ORDEM = ['inicio', 'noticias', 'mapa', 'fases', 'perfil', 'admin'];
+const ORDEM = ['inicio', 'noticias', 'admin'];
 let telaAtual = null, proximaNav = null;
 const telaEl = n => $('tela-' + n);
-const blocoDe = n => document.querySelector(`.bloco-menu[data-bloco="${n}"]`);
 const nomeDoHash = () => { const n = location.hash.replace(/^#\/?/, ''); return ORDEM.includes(n) ? n : 'inicio'; };
 
 function navegar(nome, opcoes = {}) {
@@ -76,57 +74,63 @@ function mostrarTela(nome) {
   if (nome === 'admin' && !adminToken) { history.replaceState(null, '', '#/inicio'); nome = 'inicio'; }
   const op = proximaNav || {}, anterior = telaAtual;
   proximaNav = null;
-  if (nome === anterior) return;
+  if (nome === anterior) return op.depois?.();
   const trocar = () => {
-    if (anterior === 'fases') mundo.aoEsconder();
+    if (anterior === 'inicio') mundo.aoEsconder();
     ORDEM.forEach(n => { telaEl(n).hidden = n !== nome; });
     telaAtual = nome;
-    document.querySelectorAll('.dock button').forEach(b => {
-      const alvo = b.dataset.nav || (b.id === 'dockAdmin' ? 'admin' : '');
-      alvo === nome ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
-    });
-    $('topoTitulo').textContent = telaEl(nome).dataset.titulo;
+    document.querySelector('.dock [data-nav="noticias"]').toggleAttribute('aria-current', nome === 'noticias');
+    $('dockAdmin').toggleAttribute('aria-current', nome === 'admin');
+    document.querySelectorAll('.dock [aria-current]').forEach(b => b.setAttribute('aria-current', 'page'));
     document.title = nome === 'inicio' ? 'McCrea' : `${telaEl(nome).dataset.titulo} · McCrea`;
-    scrollTo(0, 0);
+    if (!op.depois) scrollTo(0, 0);
     aoMostrar(nome);
   };
+  const fim = () => op.depois?.();
   // primeira tela, teclado ou movimento reduzido: troca instantânea
-  if (!anterior || op.viaTeclado || semMovimento()) return trocar();
+  if (!anterior || op.viaTeclado || semMovimento()) { trocar(); return fim(); }
   const dir = ORDEM.indexOf(nome) >= ORDEM.indexOf(anterior) ? 1 : -1;
   if (!document.startViewTransition) {
     trocar();
-    return entrarSuave(telaEl(nome), {x: 28 * dir, y: 0, duracao: 360});
+    entrarSuave(telaEl(nome), {x: 28 * dir, y: 0, duracao: 360});
+    return fim();
   }
-  // bloco do menu <-> tela: o mesmo view-transition-name nos dois lados faz um virar o outro
   const raiz = document.documentElement;
-  const de = anterior === 'inicio' && op.origem?.closest?.('.bloco-menu') ? blocoDe(nome) : null;
-  const volta = nome === 'inicio' ? blocoDe(anterior) : null;
   raiz.style.setProperty('--dir', dir);
-  raiz.dataset.vt = de || volta ? 'expande' : 'desliza';
-  if (de) de.style.viewTransitionName = 'expande';
-  if (volta) telaEl(anterior).style.viewTransitionName = 'expande';
-  const vt = document.startViewTransition(() => {
-    trocar();
-    if (de) { de.style.viewTransitionName = ''; telaEl(nome).style.viewTransitionName = 'expande'; }
-    if (volta) { telaEl(anterior).style.viewTransitionName = ''; volta.style.viewTransitionName = 'expande'; }
-  });
-  vt.finished.finally(() => {
-    [de, volta, telaEl(nome), telaEl(anterior)].forEach(el => { if (el) el.style.viewTransitionName = ''; });
-    delete raiz.dataset.vt;
-  });
+  raiz.dataset.vt = 'desliza';
+  const vt = document.startViewTransition(trocar);
+  vt.ready.catch(() => {});   // pulada (aba oculta etc.): a troca acontece mesmo assim
+  vt.finished.finally(() => { delete raiz.dataset.vt; fim(); });
 }
 
 function aoMostrar(nome) {
-  if (nome === 'mapa') map ? map.resize() : initMap().catch(() => mapaIndisponivel($('map')));
-  if (nome === 'fases') mundo.aoMostrar();
+  if (nome === 'inicio') {
+    map ? map.resize() : initMap().catch(() => mapaIndisponivel($('map')));
+    mundo.aoMostrar();
+  }
   if (nome === 'noticias') { marcarPonto(); tocarCarrossel(); }
   if (nome === 'admin') prepararMapaAdmin();
+}
+
+// Mapa / Fases / chip: rolam até a seção da tela inicial (voltando a ela antes, se preciso)
+function irParaSecao(id, viaTeclado) {
+  const rolar = () => $(id).scrollIntoView({behavior: viaTeclado || semMovimento() ? 'auto' : 'smooth', block: 'start'});
+  telaAtual === 'inicio' ? rolar() : navegar('inicio', {viaTeclado, depois: rolar});
+}
+
+function irParaCasa(el, viaTeclado) {   // casa no mapa (ou o convite para entrar)
+  if (!user) return abrirEntrar(el, viaTeclado);
+  irParaSecao('secMapa', viaTeclado);
+  if (userPos) atualizarProxima(true).catch(() => {});
 }
 
 /* ---------- cliques: data-nav (telas) e data-acao (ações) ---------- */
 const ACOES = {
   'entrar': (el, kb) => abrirEntrar(el, kb),
   'cadastro': (el, kb) => abrirCadastro(el, kb),
+  'casa': (el, kb) => irParaCasa(el, kb),
+  'secao': (el, kb) => irParaSecao(el.dataset.secao, kb),
+  'tema': (el, kb) => alternarTema(el, kb),
   'admin': (el, kb) => adminToken ? navegar('admin', {origem: el, viaTeclado: kb}) : abrirAdmin(el, kb),
   'fechar': (el, kb) => fecharAnimado(el.closest('dialog'), kb),
   'passo-voltar': () => mostrarPasso(passo - 1, -1),
@@ -172,7 +176,8 @@ async function carregarUsuario() {
   // a animação do mapa parte da última fase que o avatar alcançou diante do usuário
   const visto = ler('fase_' + user.id);
   mundo.definir(p, visto == null ? p.fase_atual : Math.min(+visto, p.fase_atual));
-  atualizarBlocoMundo();
+  // liberou fase desde a última visita: leva até o mundo para o usuário ver o avatar andar
+  if (visto != null && p.fase_atual > +visto && telaAtual === 'inicio') irParaSecao('mundo');
   return p;
 }
 
@@ -182,7 +187,6 @@ async function carregarVisitante() {
   const fases = (await api('/api/cupons')).map((c, i) => ({...c, fase: i + 1, liberada: false, resgatavel: false, resgates: 0}));
   mundo.definir({usuario: null, fases, fase_atual: 0, pontos_totais: 0, proximo_cupom: null, faltam_pontos: 0, faltam_itens: 0}, 0);
   mostrarConta();
-  atualizarBlocoMundo();
 }
 
 function mostrarConta() {
@@ -190,55 +194,25 @@ function mostrarConta() {
   $('chip').hidden = !user;
   $('login').hidden = !!user;
   $('perfil').hidden = !user;
-  if (!user) {
-    $('bmPerfilNome').textContent = 'Sua conta';
-    $('bmPerfilTxt').textContent = 'Entre ou crie sua conta';
-    return;
-  }
+  if (!user) return;
   const p = progresso, nome = primeiroNome(user);
   if (!$('chipPontos')) $('chip').innerHTML = `<span class="mini">${SPRITE(22)}</span><span><span id="chipNome"></span><small><span id="chipPontos">${user.pontos}</span> pontos</small></span>`;
   $('chipNome').textContent = nome;
   contar($('chipPontos'), user.pontos);
   $('chip').setAttribute('aria-label', `Sua conta: ${nome}, ${user.pontos} pontos`);
-  $('bmPerfilNome').textContent = nome;
-  $('bmPerfilTxt').textContent = `${user.pontos} pontos de saldo`;
   const end = user.logradouro
     ? `${esc(user.logradouro)}, ${esc(user.numero)}${user.complemento ? ' · ' + esc(user.complemento) : ''}<br>${esc(user.bairro)}, ${esc(user.cidade)} - ${esc(user.uf)}`
     : 'Endereço não cadastrado';
   $('perfil').innerHTML = `
-    <div class="bloco">
-      <div class="perfil-topo"><div class="mini">${SPRITE(44)}</div>
-        <div><b>${esc(user.nome)}</b><small class="dica">${esc(user.email)}</small></div></div>
-      <div class="numeros">
-        <div class="numero"><b>${user.pontos}</b><small>pontos de saldo</small></div>
-        <div class="numero"><b>${p.fase_atual}/${p.fases.length}</b><small>fases liberadas</small></div>
-      </div>
-      <div class="acoes-perfil"><button class="btn" data-nav="fases">Ver minhas fases</button>
-        <button class="btn branco" data-acao="sair">Sair da conta</button></div>
+    <div class="perfil-topo"><div class="mini">${SPRITE(30)}</div>
+      <div><b>${esc(user.nome)}</b><small class="dica">${esc(user.email)}</small></div></div>
+    <div class="numeros">
+      <div class="numero"><b>${user.pontos}</b><small>pontos de saldo</small></div>
+      <div class="numero"><b>${p.fase_atual}/${p.fases.length}</b><small>fases liberadas</small></div>
     </div>
-    <div class="bloco">
-      <h2 style="margin-bottom:12px"><i class="ico lima"></i>Sua casa</h2>
-      <div class="endereco-casa"><b>Endereço fixo</b>${end}</div>
-      <div class="acoes-perfil"><button class="btn branco" data-acao="endereco">Alterar endereço</button>
-        <button class="btn branco" data-nav="mapa">Ver no mapa</button></div>
-    </div>`;
-}
-
-function atualizarBlocoMundo() {
-  const p = progresso;
-  let frac = 0, txt = 'Entre para começar a jornada', nova = false;
-  if (p && p.fases.length) {
-    const prox = p.proximo_cupom, anterior = p.fase_atual ? p.fases[p.fase_atual - 1].custo : 0;
-    frac = prox ? (p.pontos_totais - anterior) / (prox.custo - anterior) : 1;
-    txt = prox ? `Fase ${p.fase_atual} de ${p.fases.length} · faltam ${p.faltam_pontos} pontos` : 'Todas as fases liberadas!';
-    const visto = ler('fase_' + user.id);
-    nova = visto != null && p.fase_atual > +visto;   // selo estático; some depois que o usuário vê a animação
-  } else if (p) {
-    txt = 'Nenhum cupom cadastrado ainda';
-  }
-  $('bmMundoTxt').textContent = txt;
-  $('bmMundoBarra').style.transform = `scaleX(${Math.max(0, Math.min(1, frac))})`;
-  $('bmMundoSelo').hidden = !nova;
+    <div class="endereco-casa"><b>Sua casa</b>${end}</div>
+    <div class="acoes-perfil"><button class="link" data-acao="endereco">Alterar endereço</button>
+      <button class="link" data-acao="sair">Sair da conta</button></div>`;
 }
 
 const sair = tentar(async () => {
@@ -393,7 +367,7 @@ async function buscarCep(cep) {   // ViaCEP preenche rua, bairro, cidade e UF
 /* =====================================================================
    Mapas (MapLibre + OpenFreeMap, sem chave e sem custo)
    ===================================================================== */
-const ESTILO_MAPA = 'https://tiles.openfreemap.org/styles/positron';   // estilo claro, combina com o visual
+const estiloMapa = () => `https://tiles.openfreemap.org/styles/${temaEscuro() ? 'dark' : 'positron'}`;   // claro ou escuro, como a página
 const CENTRO_SP = [-46.6333, -23.5505];   // MapLibre usa [longitude, latitude]
 
 function marcador(pos, cor, titulo, alvo = map, arrastavel = false) {
@@ -410,7 +384,7 @@ function mapaIndisponivel(el) {
 }
 
 function desenharRota(a, b) {   // linha reta tracejada = distância euclidiana usada no cálculo
-  mapaPronto?.then(() => map.getSource('rota').setData({
+  mapaPronto?.then(() => map.getSource('rota')?.setData({
     type: 'Feature', properties: {},
     geometry: {type: 'LineString', coordinates: a && b ? [[a.lng, a.lat], [b.lng, b.lat]] : []}}));
 }
@@ -438,14 +412,12 @@ function limparPosicao() {
   desenharRota(null);
   $('proxima').className = 'dica';
   $('proxima').textContent = 'Entre ou crie sua conta para ver as máquinas mais próximas do seu endereço.';
-  $('bmMapaTxt').textContent = 'Máquinas da cidade';
 }
 
 async function atualizarProxima(ajustar) {
   if (!userPos) return;
   const lista = await api(`/api/maquinas/proximas?lat=${userPos.lat}&lng=${userPos.lng}`);
   nearest = lista[0];
-  $('bmMapaTxt').textContent = `Mais perto: ${nearest.nome} · ${nearest.distancia_km} km`;
   $('proxima').className = 'tiles';
   $('proxima').innerHTML = lista.map((m, i) => {
     const pct = Math.round(100 * m.ocupacao / m.capacidade);
@@ -470,17 +442,21 @@ async function initMap() {
   if (map) return;
   if (!window.maplibregl) return mapaIndisponivel($('map'));
   $('map').innerHTML = '';
-  map = new maplibregl.Map({container: 'map', style: ESTILO_MAPA, center: CENTRO_SP, zoom: 11,
+  map = new maplibregl.Map({container: 'map', style: estiloMapa(), center: CENTRO_SP, zoom: 11,
                             attributionControl: {compact: true}});
   map.addControl(new maplibregl.NavigationControl({showCompass: false}), 'top-right');
   map.addControl(new maplibregl.FullscreenControl(), 'top-right');
-  mapaPronto = new Promise(ok => map.on('load', () => {
+  mapaPronto = new Promise(ok => map.once('load', ok));
+  // a camada da rota some quando o estilo troca (tema): recria a cada estilo carregado
+  map.on('style.load', () => {
+    if (map.getSource('rota')) return;
     map.addSource('rota', {type: 'geojson', data: {type: 'FeatureCollection', features: []}});
     map.addLayer({id: 'rota', type: 'line', source: 'rota', layout: {'line-cap': 'round'},
-                  paint: {'line-color': '#1fb3f5', 'line-width': 4, 'line-dasharray': [1, 2]}});
-    ok();
-  }));
+                  paint: {'line-color': '#1aa3e8', 'line-width': 4, 'line-dasharray': [1, 2]}});
+    if (userPos && nearest) desenharRota(userPos, {lat: nearest.lat, lng: nearest.lng});
+  });
   map.on('error', e => console.warn('Mapa:', e.error?.message || e));
+  new ResizeObserver(() => map.resize()).observe($('map'));   // o quadro cresce com a coluna da conta
   await carregarMaquinas();
   if (userPos) await definirPosicao(userPos.lat, userPos.lng);
 }
@@ -488,7 +464,7 @@ async function initMap() {
 function prepararMiniMapa() {   // criado só quando o diálogo está visível
   if (!window.maplibregl) return mapaIndisponivel($('miniMapa'));
   if (miniMapa) return miniMapa.resize();
-  miniMapa = new maplibregl.Map({container: 'miniMapa', style: ESTILO_MAPA, center: CENTRO_SP, zoom: 10,
+  miniMapa = new maplibregl.Map({container: 'miniMapa', style: estiloMapa(), center: CENTRO_SP, zoom: 10,
                                  attributionControl: {compact: true}});
   miniMapa.addControl(new maplibregl.NavigationControl({showCompass: false}), 'top-right');
   miniMapa.on('click', e => definirCasa({lat: e.lngLat.lat, lng: e.lngLat.lng}));
@@ -565,11 +541,6 @@ async function carregarAnuncios() {
       <span class="saiba">Saiba mais →</span></span></button>`).join('');
   $('pontosCarrossel').innerHTML = anuncios.map((a, i) =>
     `<button data-acao="ir-cartaz" data-i="${i}" aria-label="Ir para o cartaz ${i + 1}: ${esc(a.titulo)}"></button>`).join('');
-  // bloco do menu mostra o cartaz mais recente
-  const img = $('bmNoticiasImg');
-  img.hidden = !anuncios.length;
-  if (anuncios.length) img.src = anuncios[0].imagem;
-  $('bmNoticiasTxt').textContent = anuncios.length ? anuncios[0].titulo : 'Novidades da comunidade';
   cartazAtual = 0;
   $('trilhaCartazes').scrollLeft = 0;
   marcarPonto();
@@ -681,8 +652,6 @@ async function entrarAdmin(token, silencioso) {
 
 function marcarAdmin(ativo) {
   $('dockAdmin').classList.toggle('admin-ativo', ativo);
-  $('bmAdmin').classList.toggle('ativo', ativo);
-  $('bmAdminTxt').textContent = ativo ? 'Painel ativo' : 'Requer token';
 }
 
 function sairAdmin(expirou) {
@@ -694,13 +663,14 @@ function sairAdmin(expirou) {
   $('painelAdmin').innerHTML = '';
   marcarAdmin(false);
   if (telaAtual === 'admin') navegar('inicio');
+  else mundo.aoMostrar();
   aviso(expirou ? 'Sessão de administrador inválida.' : 'Modo administrador encerrado.', expirou ? 'erro' : 'ok');
 }
 
 function prepararMapaAdmin() {   // mapa próprio do painel: clique para marcar a nova máquina
   if (!window.maplibregl || !$('mapaAdmin')) return;
   if (mapaAdmin) return mapaAdmin.resize();
-  mapaAdmin = new maplibregl.Map({container: 'mapaAdmin', style: ESTILO_MAPA, center: CENTRO_SP, zoom: 10.5,
+  mapaAdmin = new maplibregl.Map({container: 'mapaAdmin', style: estiloMapa(), center: CENTRO_SP, zoom: 10.5,
                                   attributionControl: {compact: true}});
   mapaAdmin.addControl(new maplibregl.NavigationControl({showCompass: false}), 'top-right');
   mapaAdmin.on('click', e => {
@@ -882,16 +852,44 @@ document.addEventListener('submit', e => { if (e.target.id === 'formAnuncio') sa
 document.addEventListener('change', e => { if (e.target.id === 'an_imagem') previaCartaz(); });
 
 /* =====================================================================
+   Tema claro / escuro (segue o sistema até o usuário escolher)
+   ===================================================================== */
+const sistemaEscuro = matchMedia('(prefers-color-scheme: dark)');
+const temaEscuro = () => document.documentElement.dataset.tema
+  ? document.documentElement.dataset.tema === 'escuro' : sistemaEscuro.matches;
+
+function marcarTema() {
+  const escuro = temaEscuro();
+  $('btnTema').setAttribute('aria-pressed', escuro);
+  $('btnTema').setAttribute('aria-label', escuro ? 'Modo claro' : 'Modo escuro');
+  [map, miniMapa, mapaAdmin].forEach(m => m?.setStyle(estiloMapa(), {diff: false}));
+}
+
+// o novo tema se abre em círculo a partir do botão (causa e efeito); teclado ou movimento reduzido: na hora
+async function alternarTema(botao, viaTeclado) {
+  const novo = temaEscuro() ? 'claro' : 'escuro';
+  const aplicar = () => { document.documentElement.dataset.tema = novo; guardar('tema', novo); marcarTema(); };
+  if (viaTeclado || semMovimento() || !document.startViewTransition) return aplicar();
+  const r = botao.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+  const raio = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+  const raiz = document.documentElement;
+  raiz.dataset.vt = 'tema';
+  const vt = document.startViewTransition(aplicar);
+  vt.finished.finally(() => delete raiz.dataset.vt);
+  try { await vt.ready; } catch { return; }   // transição pulada (aba oculta etc.): o tema já foi aplicado
+  raiz.animate({clipPath: [`circle(0 at ${x}px ${y}px)`, `circle(${raio}px at ${x}px ${y}px)`]},
+               {duration: 560, easing: EASE.entra, pseudoElement: '::view-transition-new(root)'});
+}
+sistemaEscuro.addEventListener('change', () => { if (!document.documentElement.dataset.tema) marcarTema(); });
+
+/* =====================================================================
    Início
    ===================================================================== */
 (async function iniciar() {   // roda mesmo se o mapa não carregar
-  $('miniBoasVindas').innerHTML = SPRITE(44);
-  $('bmAvatar').innerHTML = SPRITE(40);
-  $('bmPerfilAvatar').innerHTML = SPRITE(30);
+  $('miniBoasVindas').innerHTML = SPRITE(40);
+  marcarTema();
   const pedida = nomeDoHash();
   mostrarTela(pedida);
-  // entrada escalonada dos blocos só na primeira carga (evento raro; voltar ao menu não repete)
-  if (telaAtual === 'inicio') document.querySelectorAll('.bloco-menu').forEach((b, i) => entrarSuave(b, {atraso: i * 50, duracao: 420}));
   carregarAnuncios().catch(() => { $('carrossel').hidden = true; $('noticiasVazio').hidden = false; });
   setInterval(() => carregarAnuncios().catch(() => {}), 5 * 60 * 1000);   // novidades sem recarregar a página
   addEventListener('resize', marcarPonto);
