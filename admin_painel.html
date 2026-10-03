@@ -1,47 +1,51 @@
-<!-- Fragmento servido só por GET /api/admin/painel com X-Admin-Token válido. -->
-<div class="cab-bloco">
-  <h2><i class="ico laranja"></i>Painel do administrador</h2>
-  <button class="btn branco pequeno" onclick="sairAdmin()">Sair do modo admin</button>
-</div>
-
+<!-- Fragmento servido só por GET /api/admin/painel com X-Admin-Token válido.
+     Os botões usam data-acao (tratados em static/js/app.js). -->
 <div class="admin-grade">
   <div class="cartao">
     <h3>Planilha de usuários</h3>
     <p class="dica">O arquivo <b>planilhas/usuarios.xlsx</b> é atualizado a cada cadastro ou mudança de endereço.</p>
-    <button class="btn" onclick="baixarPlanilha()">Baixar planilha (.xlsx)</button>
-  </div>
-
-  <div class="cartao">
-    <h3>Nova máquina</h3>
-    <p class="dica">Clique no mapa para marcar o local (pino laranja): <b id="m_local">nenhum</b></p>
-    <input id="m_nome" placeholder="Nome">
-    <input id="m_bairro" placeholder="Bairro">
-    <input id="m_end" placeholder="Endereço">
-    <button class="btn" onclick="novaMaquina()">Adicionar máquina</button>
-  </div>
-
-  <div class="cartao">
-    <h3>Novo cupom (nova fase)</h3>
-    <input id="c_marca" placeholder="Marca parceira">
-    <input id="c_desc" placeholder="Descrição">
-    <input id="c_custo" type="number" min="1" placeholder="Custo em pontos">
-    <button class="btn" onclick="novoCupom()">Adicionar cupom</button>
+    <button class="btn" data-acao="planilha">Baixar planilha (.xlsx)</button>
   </div>
 
   <div class="cartao">
     <h3>Simular depósito</h3>
-    <p class="dica">Credita o usuário logado na máquina mais próxima.</p>
+    <p class="dica">Credita o usuário logado na máquina mais próxima da casa dele.</p>
     <select id="d_mat">{% for m, p in materiais.items() %}<option value="{{ m }}">{{ m|upper }} ({{ p }} pontos por item)</option>{% endfor %}</select>
-    <input id="d_qtd" type="number" min="1" value="3">
-    <button class="btn verde" onclick="depositar()">Depositar</button>
+    <input id="d_qtd" type="number" min="1" value="3" aria-label="Quantidade de itens">
+    <button class="btn verde" data-acao="depositar">Depositar</button>
+  </div>
+
+  <div class="cartao">
+    <h3>Novo cupom (nova fase)</h3>
+    <input id="c_marca" placeholder="Marca parceira" aria-label="Marca parceira">
+    <input id="c_desc" placeholder="Descrição" aria-label="Descrição">
+    <input id="c_custo" type="number" min="1" placeholder="Custo em pontos" aria-label="Custo em pontos">
+    <button class="btn" data-acao="novo-cupom">Adicionar cupom</button>
+  </div>
+
+  <div class="cartao largo">
+    <h3>Nova máquina</h3>
+    <p class="dica">Clique no mapa para marcar o local (pino laranja): <b id="m_local">nenhum</b></p>
+    <div id="mapaAdmin"></div>
+    <div class="grade-form">
+      <input id="m_nome" placeholder="Nome" aria-label="Nome da máquina">
+      <input id="m_bairro" placeholder="Bairro" aria-label="Bairro">
+      <input id="m_end" class="inteiro" placeholder="Endereço" aria-label="Endereço">
+    </div>
+    <button class="btn" data-acao="nova-maquina">Adicionar máquina</button>
+  </div>
+
+  <div class="cartao">
+    <h3>Itens por material</h3>
+    <div id="por_material"></div>
   </div>
 
   <div class="cartao largo">
     <h3 id="an_form_titulo">Novo anúncio (Notícias)</h3>
     <p class="dica">O cartaz aparece no carrossel de Notícias assim que for salvo. PNG, JPG, WebP ou GIF até {{ max_mb }} MB, de preferência em 16:9.</p>
-    <form id="formAnuncio" onsubmit="salvarAnuncio(event)" novalidate>
+    <form id="formAnuncio" novalidate>
       <label class="campo" for="an_imagem">Cartaz <small id="an_imagem_dica"></small></label>
-      <input id="an_imagem" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onchange="previaCartaz()">
+      <input id="an_imagem" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
       <img id="an_previa" class="previa-cartaz" alt="Prévia do cartaz" hidden>
       <label class="campo" for="an_titulo">Título</label>
       <input id="an_titulo" maxlength="120" placeholder="Ex.: Nova máquina no Largo da Batata">
@@ -53,7 +57,7 @@
         <div><label class="check" style="margin-top:28px"><input type="checkbox" id="an_ativo" checked> <span>Publicado no carrossel</span></label></div>
       </div>
       <div class="acoes">
-        <button type="button" class="btn branco" id="an_cancelar" onclick="limparFormAnuncio()" hidden>Cancelar edição</button>
+        <button type="button" class="btn branco" id="an_cancelar" data-acao="cancelar-anuncio" hidden>Cancelar edição</button>
         <button class="btn verde" id="an_salvar">Publicar anúncio</button>
       </div>
     </form>
@@ -67,10 +71,5 @@
   <div class="cartao largo">
     <h3>Reciclagem por bairro</h3>
     <div class="tabela"><table id="analise"></table></div>
-  </div>
-
-  <div class="cartao">
-    <h3>Itens por material</h3>
-    <div id="por_material"></div>
   </div>
 </div>

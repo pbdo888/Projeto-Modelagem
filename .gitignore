@@ -1,0 +1,13 @@
+# ambiente e segredos
+.venv/
+.env
+
+# dados gerados (contêm dados pessoais: LGPD)
+*.db
+planilhas/usuarios.xlsx
+uploads/
+
+# Python e IDE
+__pycache__/
+*.pyc
+.idea/

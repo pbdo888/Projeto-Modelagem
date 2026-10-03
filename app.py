@@ -200,6 +200,13 @@ def validar_cadastro(d):
 
 @app.get("/")
 def index():
+    # template_folder="." faz o caminho do template partir da raiz do projeto
+    return render_template("templates/casa.html")
+
+
+@app.get("/app")
+def app_principal():
+    """O app completo (mapa, login, cadastro, notícias, admin), que antes ficava em '/'."""
     return render_template("index.html", sexos=SEXOS, estados_civis=ESTADOS_CIVIS,
                            como_conheceu=COMO_CONHECEU, ufs=UFS)
 

@@ -1,0 +1,140 @@
+/* =====================================================================
+   McCrea · ambiente das telas internas (carregado depois do mccrea.css)
+   Claro: céu de pôr do sol, continuação do chão pêssego da praça (Home).
+   Escuro: grafite azulado com partículas douradas (a luz dos postes da praça).
+   As partículas são desenhadas pelo static/js/ambiente.js num <canvas> de fundo.
+   ===================================================================== */
+:root {
+  --ceu-pagina:
+    radial-gradient(120% 70% at 50% 112%, rgba(255,233,184,.95) 0%, rgba(255,196,138,.55) 22%, rgba(255,170,130,0) 55%),
+    linear-gradient(180deg, #8C86C2 0%, #C58FB6 26%, #EE9C9C 50%, #F6B38C 74%, #FBD3A0 100%);
+  --chao-base:#EFA98F;
+  --tinta:#3A4152; --suave:#6F6A80;
+  --superficie:rgba(255,255,255,.62); --linha:rgba(110,70,80,.14);
+  --vidro:rgba(255,250,246,.70); --vidro-forte:rgba(255,250,246,.93); --vidro-borda:rgba(255,255,255,.75);
+  --sombra:0 12px 32px rgba(110,50,60,.16), 0 1px 2px rgba(110,50,60,.10), inset 0 1px 0 rgba(255,255,255,.8);
+  --campo:rgba(255,255,255,.85); --campo-borda:rgba(110,70,80,.20);
+  --veu:rgba(120,70,90,.30);
+  --azul-claro:rgba(26,163,232,.14);
+  /* barra e menu: o mesmo vidro azul-marinho da Home, nos dois temas */
+  --nav-vidro:rgba(24,32,56,.80); --nav-linha:rgba(255,255,255,.17);
+}
+@media (prefers-color-scheme:dark) {
+  :root:not([data-tema="claro"]) {
+    --ceu-pagina:
+      radial-gradient(90% 60% at 50% -10%, rgba(120,132,160,.30) 0%, rgba(120,132,160,0) 60%),
+      radial-gradient(70% 50% at 85% 110%, rgba(255,196,110,.08) 0%, rgba(255,196,110,0) 60%),
+      linear-gradient(180deg, #343B4C 0%, #262B38 45%, #181C25 100%);
+    --chao-base:#1E222D;
+    --tinta:#E8ECF4; --suave:#A3ABBD;
+    --superficie:rgba(255,255,255,.05); --linha:rgba(255,255,255,.09);
+    --vidro:rgba(34,39,52,.62); --vidro-forte:rgba(34,39,52,.95); --vidro-borda:rgba(255,255,255,.09);
+    --sombra:0 12px 32px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.06);
+    --campo:rgba(10,13,20,.45); --campo-borda:rgba(255,255,255,.12);
+    --veu:rgba(8,10,16,.60);
+    --azul-claro:rgba(26,163,232,.16);
+  }
+}
+:root[data-tema="escuro"] {
+  --ceu-pagina:
+    radial-gradient(90% 60% at 50% -10%, rgba(120,132,160,.30) 0%, rgba(120,132,160,0) 60%),
+    radial-gradient(70% 50% at 85% 110%, rgba(255,196,110,.08) 0%, rgba(255,196,110,0) 60%),
+    linear-gradient(180deg, #343B4C 0%, #262B38 45%, #181C25 100%);
+  --chao-base:#1E222D;
+  --tinta:#E8ECF4; --suave:#A3ABBD;
+  --superficie:rgba(255,255,255,.05); --linha:rgba(255,255,255,.09);
+  --vidro:rgba(34,39,52,.62); --vidro-forte:rgba(34,39,52,.95); --vidro-borda:rgba(255,255,255,.09);
+  --sombra:0 12px 32px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.06);
+  --campo:rgba(10,13,20,.45); --campo-borda:rgba(255,255,255,.12);
+  --veu:rgba(8,10,16,.60);
+  --azul-claro:rgba(26,163,232,.16);
+}
+
+/* ---------- fundo: céu fixo + partículas ---------- */
+html { background:var(--chao-base); }
+body { background:transparent; }
+body::before { content:""; position:fixed; inset:0; z-index:-2; background:var(--ceu-pagina); pointer-events:none; }
+#ambiente { position:fixed; inset:0; z-index:-1; width:100%; height:100%; pointer-events:none; }
+
+/* ---------- vidro: cartões deixam o fundo aparecer ---------- */
+.bloco { -webkit-backdrop-filter:blur(16px) saturate(1.3); backdrop-filter:blur(16px) saturate(1.3); }
+dialog { background:var(--vidro-forte); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); }
+.aviso { background:var(--vidro-forte); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+.balao { background:var(--vidro-forte); }
+.balao::after { border-top-color:var(--vidro-forte); }
+.boas-vindas .mini, .perfil-topo .mini { background:var(--azul-claro); box-shadow:inset 0 0 0 1px var(--linha); }
+:root .tile.destaque { box-shadow:inset 0 0 0 2px var(--verde); }
+.btn:disabled { background:var(--superficie); box-shadow:inset 0 0 0 1px var(--linha); color:var(--suave); }
+
+/* ---------- barra superior: igual à da Home ---------- */
+.topo {
+  top:max(12px, env(safe-area-inset-top, 0px)); width:min(1480px, calc(100% - 28px)); height:62px;
+  margin:12px auto 0; padding:0 10px 0 14px; gap:12px;
+  background:var(--nav-vidro); border:1px solid var(--nav-linha); border-radius:18px;
+  -webkit-backdrop-filter:blur(10px) saturate(1.25); backdrop-filter:blur(10px) saturate(1.25);
+  box-shadow:0 10px 28px rgba(40,25,40,.28), inset 0 1px 0 rgba(255,255,255,.10);
+}
+:root .topo .logo { gap:11px; font-size:27px; color:#DCEBFF; border-radius:12px; }
+.topo .logo .selo {
+  display:grid; width:38px; height:38px; border-radius:11px;
+  background:linear-gradient(180deg, #43C46F, #279A50); box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 2px 6px rgba(0,0,0,.25);
+}
+.topo .logo .selo svg { width:24px; height:24px; }
+.topo .tema {
+  width:40px; height:40px; color:#EAF2FF; background:rgba(64,108,186,.55); border:1.5px solid #77A9F0; box-shadow:none;
+  transition:transform .12s ease, filter .12s ease;
+}
+.topo .tema:hover { filter:brightness(1.1); }
+.topo .tema:active { transform:scale(.94); box-shadow:none; }
+.topo .tema svg { width:20px; height:20px; }
+.topo .btn {
+  height:40px; min-width:112px; padding:0 20px; display:grid; place-items:center; border-radius:20px;
+  font-size:15px; text-shadow:none; transition:transform .12s ease, filter .12s ease;
+}
+.topo .btn:hover { filter:brightness(1.1); }
+.topo .btn:active { transform:scale(.97); }
+.topo .btn.branco, .topo .btn.branco:active { color:#EAF2FF; background:rgba(64,108,186,.55); border:1.5px solid #77A9F0; box-shadow:none; }
+.topo .btn.verde, .topo .btn.verde:active {
+  color:#fff; background:linear-gradient(180deg, #3FBE6C, #279A50); border:1.5px solid rgba(255,255,255,.28); box-shadow:0 3px 10px rgba(20,90,45,.4);
+}
+.topo .chip { color:#EAF2FF; background:rgba(255,255,255,.08); box-shadow:inset 0 0 0 1px rgba(255,255,255,.14); }
+.topo .chip small { color:#B8C4DA; }
+
+/* ---------- menu inferior: igual ao da Home ---------- */
+.dock {
+  bottom:max(14px, env(safe-area-inset-bottom, 0px)); gap:7px; padding:8px; border-radius:22px;
+  background:var(--nav-vidro); border:1px solid var(--nav-linha);
+  -webkit-backdrop-filter:blur(10px) saturate(1.25); backdrop-filter:blur(10px) saturate(1.25);
+  box-shadow:0 10px 28px rgba(40,25,40,.30), inset 0 1px 0 rgba(255,255,255,.10);
+}
+.dock button {
+  width:66px; height:56px; gap:3px; border-radius:15px; font-size:11.5px; font-weight:800; color:#D5DEEE;
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); box-shadow:none;
+  transition:background .15s ease, transform .12s ease;
+}
+@media (hover:hover) { .dock button:hover { background:rgba(255,255,255,.14); } }
+.dock button:active { transform:scale(.96); box-shadow:none; }
+.dock button[aria-current="page"] {
+  color:#fff; border-color:#9CC4F8; background:linear-gradient(180deg, rgba(111,170,245,.75), rgba(70,130,220,.65));
+  box-shadow:0 0 0 3px rgba(91,155,240,.18);
+}
+.dock button.admin-ativo { color:#fff; border-color:#FFC27A; background:linear-gradient(180deg, rgba(255,170,90,.8), rgba(235,120,30,.7)); box-shadow:0 0 0 3px rgba(255,150,60,.18); }
+.dock svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+
+/* texto que fica direto sobre o céu (fora dos cartões) */
+.tela-cab .dica { color:var(--tinta); opacity:.78; font-weight:700; }
+
+#avisos { top:calc(86px + env(safe-area-inset-top, 0px)); }
+
+@media (max-width:640px) {
+  .topo { height:56px; padding:0 8px 0 10px; border-radius:16px; }
+  :root .topo .logo { font-size:21px; gap:8px; }
+  .topo .logo .selo { width:34px; height:34px; }
+  .topo .tema { width:36px; height:36px; }
+  .topo .btn { height:36px; min-width:0; padding:0 12px; font-size:13.5px; }
+  .dock button { width:58px; height:52px; font-size:10.5px; }
+}
+@media (max-width:380px) {
+  .dock { gap:5px; padding:6px; }
+  .dock button { width:48px; }
+}
