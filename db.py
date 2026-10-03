@@ -6,11 +6,11 @@ from datetime import datetime, timedelta
 
 from werkzeug.security import generate_password_hash
 
-DB_PATH = "reciclaverde.db"
+DB_PATH = "mccrea.db"
 FMT = "%Y-%m-%d %H:%M:%S"
 PONTOS_MATERIAL = {"pet": 10, "lata": 15, "vidro": 20, "papel": 5}  # pontos por item
 PONTOS_ITEM_MEDIO = 10  # só para estimar "faltam N itens"
-SENHA_DEMO = "reciclaverde"  # senha dos usuários de exemplo (@exemplo.com)
+SENHA_DEMO = "mccrea"  # senha dos usuários de exemplo (@exemplo.com)
 
 # Colunas do cadastro completo. Entram por ALTER TABLE para que bancos antigos sejam
 # atualizados sem perder dados.
@@ -111,12 +111,12 @@ CREATE TABLE IF NOT EXISTS anuncios (
 );
 """
 
-# Cartazes iniciais do carrossel de Notícias: os slides da apresentação ReciclaVerde.pptx,
-# exportados para static/cartazes/reciclaverde-NN.png (na mesma ordem).
+# Cartazes iniciais do carrossel de Notícias: os slides da apresentação McCrea.pptx,
+# exportados para static/cartazes/mccrea-NN.png (na mesma ordem).
 ANUNCIOS_INICIAIS = [
-    ("ReciclaVerde: reciclar vira desconto",
+    ("McCrea: reciclar vira desconto",
      "Máquinas inteligentes pela cidade, pontos por item reciclado e cupons de marcas parceiras.\n\n"
-     "O ReciclaVerde nasceu no Projeto de Modelagem de Sistemas (2026) com uma ideia simples: "
+     "O McCrea nasceu no Projeto de Modelagem de Sistemas (2026) com uma ideia simples: "
      "quem leva a embalagem até a máquina ganha pontos, e os pontos viram desconto nas lojas parceiras."),
     ("O Brasil gera muito e recicla pouco",
      "De cada 100 kg de resíduo urbano, menos de 9 kg seguem para a reciclagem de materiais.\n\n"
@@ -137,14 +137,14 @@ ANUNCIOS_INICIAIS = [
      "Samsung e MindMiners (2022)."),
     ("Onde há recompensa, a reciclagem acontece",
      "97,3% das latas de alumínio vendidas no Brasil em 2024 foram recicladas: 33,9 bilhões de unidades. "
-     "A lata vale dinheiro na hora da entrega. O ReciclaVerde leva essa lógica às demais embalagens.\n\n"
+     "A lata vale dinheiro na hora da entrega. O McCrea leva essa lógica às demais embalagens.\n\n"
      "• Latas de alumínio (Brasil): 97,3%\n"
      "• Embalagens com depósito (Alemanha): 96–99%\n"
      "• Resíduos urbanos (Brasil): 8,7%\n"
      "• Coleta seletiva (São Paulo): 2,85%\n\n"
      "Fontes: Recicla Latas (2025); Agência Federal de Meio Ambiente da Alemanha, via Euronews (2026); "
      "Abrema (2025); FSP-USP."),
-    ("Como o ReciclaVerde funciona",
+    ("Como o McCrea funciona",
      "1. Deposita: a pessoa leva a embalagem à máquina mais próxima de casa.\n"
      "2. Pontua: infravermelho e visão computacional identificam o material e creditam os pontos.\n"
      "3. Avança: os pontos liberam fases no mapa de cupons, uma por marca parceira.\n"
@@ -157,7 +157,7 @@ ANUNCIOS_INICIAIS = [
      "• Painel e planilha: depósitos por bairro e planilha gerada a partir do banco.\n\n"
      "Feito com Python (Flask), SQLite e HTML/JS puro. Nesta versão, a leitura da máquina é simulada."),
     ("A máquina mais próxima de cada casa",
-     "A partir do endereço fixo do cadastro, o ReciclaVerde ordena as máquinas por proximidade usando a "
+     "A partir do endereço fixo do cadastro, o McCrea ordena as máquinas por proximidade usando a "
      "distância em linha reta: d = √(Δlat² + Δlng²), convertida para km (1° ≈ 111 km).\n\n"
      "• Simples: poucas operações aritméticas por máquina.\n"
      "• Barato: sem API paga e sem GPS em tempo real.\n"
@@ -167,7 +167,7 @@ ANUNCIOS_INICIAIS = [
      "• 70% economizam com cupons todos os meses.\n"
      "• 80% dizem que o cupom influencia onde vão comprar.\n"
      "• 53% poupam mais de R$ 50 por mês com cupons.\n\n"
-     "No ReciclaVerde, a pessoa paga o cupom com embalagens, não com dinheiro.\n\n"
+     "No McCrea, a pessoa paga o cupom com embalagens, não com dinheiro.\n\n"
      "Fidelidade no 1º trimestre de 2026: 306 milhões de cadastros em programas de fidelidade, "
      "com R$ 6,3 bilhões de faturamento no trimestre.\n\n"
      "Fontes: Serasa e Opinion Box (maio de 2026, 1.051 entrevistas); ABEMF, indicadores do 1º trimestre de 2026."),
@@ -194,7 +194,7 @@ ANUNCIOS_INICIAIS = [
      "• Marca parceira: entrega cupons e patrocínio de máquinas e recebe clientes novos e dados de reciclagem.\n"
      "• Cooperativas: fazem a coleta e a triagem e recebem material já separado, em volume previsível.\n"
      "• Cidade: oferece locais para as máquinas e ganha menos aterro e mais pontos de entrega.\n"
-     "• ReciclaVerde: fornece máquinas, aplicativo e painel e recebe taxa por resgate, patrocínio e material.\n\n"
+     "• McCrea: fornece máquinas, aplicativo e painel e recebe taxa por resgate, patrocínio e material.\n\n"
      "Papéis previstos no modelo de negócio; parcerias com marcas, cooperativas e prefeitura ainda a firmar."),
     ("Receita e riscos do modelo",
      "Receita prevista:\n"
@@ -282,7 +282,7 @@ def migrar(con):
 
 def seed_anuncios(con):
     con.executemany("INSERT INTO anuncios (titulo, texto, imagem, ordem) VALUES (?,?,?,?)", [
-        (titulo, texto, f"/static/cartazes/reciclaverde-{i:02d}.png", i)
+        (titulo, texto, f"/static/cartazes/mccrea-{i:02d}.png", i)
         for i, (titulo, texto) in enumerate(ANUNCIOS_INICIAIS, start=1)])
 
 

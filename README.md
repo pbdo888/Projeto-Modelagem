@@ -1,4 +1,4 @@
-# ReciclaVerde (protótipo)
+# McCrea (protótipo)
 
 **Repositório:** https://github.com/pbdo888/Projeto-Modelagem
 
@@ -32,8 +32,8 @@ nem cartão.
 
 3. Rode `python app.py` e abra http://localhost:5000
 
-O banco `reciclaverde.db` é criado e populado com dados de exemplo (São Paulo) na primeira execução.
-Para recriá-lo, apague o arquivo. Para entrar, use por exemplo `ana@exemplo.com` com a senha `reciclaverde`
+O banco `mccrea.db` é criado e populado com dados de exemplo (São Paulo) na primeira execução.
+Para recriá-lo, apague o arquivo. Para entrar, use por exemplo `ana@exemplo.com` com a senha `mccrea`
 (senha de todos os usuários de exemplo). Contas antigas, criadas só com e-mail, completam o cadastro em
 "Criar conta" com o mesmo e-mail e mantêm os pontos.
 
@@ -65,12 +65,17 @@ Hospede em Heroku, AWS, Replit ou similar. Mais profissional, mas requer configu
 ## Estrutura
 
 - `db.py`: esquema (usuarios, funcionarios, maquinas, cupons, depositos, resgates, coletas, anuncios), migração e dados de exemplo
-- `static/cartazes/`: cartazes iniciais do carrossel de Notícias (slides da apresentação ReciclaVerde)
+- `static/cartazes/`: cartazes iniciais do carrossel de Notícias (slides da apresentação McCrea)
 - `uploads/anuncios/`: cartazes enviados pelo painel de admin (fora do git)
 - `app.py`: API REST e rota da página (Flask)
 - `planilha.py`: gera `planilhas/usuarios.xlsx` a partir do banco de dados (também roda sozinho: `python planilha.py`)
-- `index.html`: notícias (carrossel de cartazes), mapa interativo, cadastro/login, mundo de cupons
+- `index.html`: template da página (menu de blocos estilo Wii U: notícias, mapa, fases, conta e admin; diálogos de login/cadastro)
+- `static/css/mccrea.css`: visual (vidro, blocos, botões táteis), mundo de cupons e transições entre telas
+- `static/js/movimento.js`: curvas de animação, avisos e diálogos que abrem a partir do botão de origem (respeita `prefers-reduced-motion`)
+- `static/js/mundo.js`: mundo de cupons no estilo do mapa do Super Mario Bros. Wii (fases, caminho e avatar)
+- `static/js/app.js`: navegação entre telas (`#/inicio`, `#/mapa`, `#/fases`…), conta, mapa, notícias e painel de admin
 - `admin_painel.html`: painel de administração, protegido por token
+- `prototipo/mundo-cupons.html`: protótipo do mundo de cupons com dados simulados (abre direto no navegador)
 - `requirements.txt`: dependências Python do projeto
 
 ## Pontos principais
@@ -107,7 +112,7 @@ import sqlite3, pandas as pd
 
 df = pd.read_sql(
     "SELECT d.*, m.bairro, m.lat, m.lng FROM depositos d JOIN maquinas m ON m.id = d.maquina_id",
-    sqlite3.connect("reciclaverde.db"))
+    sqlite3.connect("mccrea.db"))
 print(df.groupby("bairro")[["quantidade", "pontos"]].sum())
 ```
 
@@ -117,7 +122,7 @@ print(df.groupby("bairro")[["quantidade", "pontos"]].sum())
 Certifique-se de que `.gitignore` contém:
 ```
 .env
-reciclaverde.db
+mccrea.db
 planilhas/usuarios.xlsx
 .idea/
 __pycache__/

@@ -1,4 +1,4 @@
-"""ReciclaVerde: API Flask + front (index.html). Rode com: python app.py"""
+"""McCrea: API Flask + front (index.html). Rode com: python app.py"""
 import math
 import os
 import re
@@ -222,7 +222,7 @@ def admin_painel():
 @requer_admin
 def baixar_planilha():
     atualizar_planilha()
-    return send_file(os.path.abspath(PLANILHA_PATH), as_attachment=True, download_name="usuarios_reciclaverde.xlsx")
+    return send_file(os.path.abspath(PLANILHA_PATH), as_attachment=True, download_name="usuarios_mccrea.xlsx")
 
 
 # ---------- máquinas ----------
