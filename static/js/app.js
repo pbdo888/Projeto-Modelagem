@@ -41,6 +41,8 @@ const mundo = criarMundo({
     $('codigoMarca').textContent = `${f.marca}: ${f.descricao}`;
     $('codigo').innerHTML = [...r.codigo].map(ch => `<span>${esc(ch)}</span>`).join('');
     abrirDeOrigem($('dlgCodigo'), botao, viaTeclado);
+    // estouro dourado (ambiente.js) quando o diálogo termina de abrir
+    Promise.all($('dlgCodigo').getAnimations().map(a => a.finished)).then(() => window.ambiente?.estourar($('codigo')), () => {});
     // código "digitado" letra a letra: evento raro, pode ter mais personalidade
     if (!viaTeclado && !semMovimento()) $('codigo').querySelectorAll('span').forEach((s, i) =>
       s.animate([{opacity: 0, transform: 'translateY(8px)'}, {opacity: 1, transform: 'none'}],
@@ -68,6 +70,7 @@ function navegar(nome, opcoes = {}) {
   if (location.hash === '#/' + nome) mostrarTela(nome);
   else location.hash = '#/' + nome;   // o hashchange chama mostrarTela (e o "voltar" do navegador funciona)
 }
+addEventListener('hashchange', abrirAtalho);   // antes do mostrarTela, que trocaria #/admin por #/inicio
 addEventListener('hashchange', () => mostrarTela(nomeDoHash()));
 
 function mostrarTela(nome) {
@@ -118,17 +121,11 @@ function irParaSecao(id, viaTeclado) {
   telaAtual === 'inicio' ? rolar() : navegar('inicio', {viaTeclado, depois: rolar});
 }
 
-function irParaCasa(el, viaTeclado) {   // casa no mapa (ou o convite para entrar)
-  if (!user) return abrirEntrar(el, viaTeclado);
-  irParaSecao('secMapa', viaTeclado);
-  if (userPos) atualizarProxima(true).catch(() => {});
-}
-
 /* ---------- cliques: data-nav (telas) e data-acao (ações) ---------- */
 const ACOES = {
   'entrar': (el, kb) => abrirEntrar(el, kb),
   'cadastro': (el, kb) => abrirCadastro(el, kb),
-  'casa': (el, kb) => irParaCasa(el, kb),
+  'casa': () => { location.href = '/'; },   // volta para a página Home (/)
   'secao': (el, kb) => irParaSecao(el.dataset.secao, kb),
   'tema': (el, kb) => alternarTema(el, kb),
   'admin': (el, kb) => adminToken ? navegar('admin', {origem: el, viaTeclado: kb}) : abrirAdmin(el, kb),
@@ -898,4 +895,22 @@ sistemaEscuro.addEventListener('change', () => { if (!document.documentElement.d
   if (t) entrarAdmin(t, true).then(ok => { if (ok && pedida === 'admin') navegar('admin', {viaTeclado: true}); }).catch(() => {});
   try { await carregarUsuario(); }
   catch { await carregarVisitante().catch(() => {}); }
+  if (pedida === 'admin' && !t) abrirAdmin(null, true);
+  abrirAtalho();
 })();
+
+// Atalhos vindos da página Home (/): /app#/entrar, #/cadastro, #/mapa, #/cupons, #/conta
+const ATALHOS = {
+  entrar: () => { if (!user) abrirEntrar(null, true); },
+  cadastro: () => { if (!user) abrirCadastro(null, true); },
+  mapa: () => irParaSecao('secMapa', true),
+  cupons: () => irParaSecao('mundo', true),
+  conta: () => irParaSecao('secConta', true),
+  admin: () => adminToken ? navegar('admin', {viaTeclado: true}) : abrirAdmin(null, true),
+};
+function abrirAtalho() {
+  const a = ATALHOS[location.hash.replace(/^#\/?/, '')];
+  if (!a) return;
+  history.replaceState(null, '', '#/inicio');
+  a();
+}

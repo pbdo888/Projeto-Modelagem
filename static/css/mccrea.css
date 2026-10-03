@@ -110,12 +110,12 @@ h3 { font-size:15px; font-weight:800; margin-bottom:10px; }
 }
 .tema:active { transform:translateY(2px); box-shadow:0 1px 0 var(--btn-branco-lip); transition-duration:60ms; }
 .tema svg { width:22px; height:22px; }
-.tema .lua { display:none; }
-:root[data-tema="escuro"] .tema .sol { display:none; }
-:root[data-tema="escuro"] .tema .lua { display:block; }
+.tema .sol { display:none; }
+:root[data-tema="escuro"] .tema .lua { display:none; }
+:root[data-tema="escuro"] .tema .sol { display:block; }
 @media (prefers-color-scheme:dark) {
-  :root:not([data-tema="claro"]) .tema .sol { display:none; }
-  :root:not([data-tema="claro"]) .tema .lua { display:block; }
+  :root:not([data-tema="claro"]) .tema .lua { display:none; }
+  :root:not([data-tema="claro"]) .tema .sol { display:block; }
 }
 .auth { display:flex; gap:10px; }
 .chip {
