@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mundo de Cupons · protótipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+<style>
+  /* ===== Tokens (Wii U: branco, vidro, ciano e verde-limão) ===== */
+  :root {
+    --ciano:#1fb3f5; --ciano-escuro:#0a7cc4; --ciano-claro:#e2f5ff;
+    --lima:#86d11a; --lima-escuro:#4f8f0a;
+    --ouro:#ffcc1a; --ouro-escuro:#c98a00;
+    --tinta:#2d4256; --suave:#7a8c9c; --linha:#dce7ef;
+    --vidro:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.8) 48%, rgba(236,246,255,.72) 52%, rgba(255,255,255,.88) 100%);
+    --sombra:0 8px 24px rgba(25,80,125,.13), 0 1px 2px rgba(25,80,125,.08), inset 0 1px 0 #fff;
+
+    /* Easing: cada curva tem uma função (nunca o "ease" padrão) */
+    --ease-entra:cubic-bezier(.22, 1, .36, 1);    /* chegando: rápido no início, pousa suave */
+    --ease-sai:cubic-bezier(.55, 0, 1, .45);      /* saindo: acelera para fora */
+    --ease-estado:cubic-bezier(.65, 0, .35, 1);   /* mudança de estado visível (andar no mapa) */
+    --ease-flutua:cubic-bezier(.37, 0, .63, 1);   /* senoide para a flutuação do avatar */
+    /* Molas em CSS puro (linear()): ~12% e ~25% de overshoot */
+    --mola:linear(0, .057, .195, .374, .561, .733, .877, .987, 1.063, 1.107, 1.125, 1.124, 1.11, 1.089, 1.065, 1.042, 1.023, 1.007, .996, .988, .985, .984, .985, .988, .991, .993, .996, .998, 1, 1.001, 1.002, 1.002, 1.002, 1.002, 1.001, 1.001, 1);
+    --mola-viva:linear(0, .077, .266, .509, .754, .965, 1.122, 1.216, 1.253, 1.242, 1.199, 1.139, 1.076, 1.02, .977, .949, .937, .937, .947, .961, .977, .992, 1.004, 1.012, 1.016, 1.016, 1.014, 1.011, 1.007, 1.003, 1, .997, .996, .996, .996, .997, 1);
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; min-height:100vh; padding:24px 16px 48px; color:var(--tinta);
+    font:15px/1.45 Nunito, "Segoe UI", system-ui, sans-serif;
+    background:#f3f7fa repeating-linear-gradient(0deg, transparent 0 3px, rgba(140,170,195,.09) 3px 4px);
+  }
+  .pagina { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:minmax(0, 1fr); gap:20px; }
+  h2 { margin:0; font-size:18px; font-weight:900; display:flex; align-items:center; gap:10px; }
+  .ico { width:14px; height:14px; border-radius:50%; background:var(--ouro); box-shadow:0 0 0 4px #fff3c4; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+  :focus-visible { outline:3px solid #8fd6ff; outline-offset:3px; }
+
+  .bloco {
+    position:relative; padding:18px; border-radius:26px; background:var(--vidro);
+    border:1px solid rgba(255,255,255,.95); box-shadow:var(--sombra);
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  }
+  .cab { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+  .dica { margin:0; color:var(--suave); font-size:13px; font-weight:700; }
+
+  /* ===== Botão tátil: afunda no clique (resposta imediata, volta com calma) ===== */
+  .btn {
+    appearance:none; border:0; cursor:pointer; font:inherit; font-weight:800; color:#fff; white-space:nowrap;
+    padding:10px 20px; border-radius:999px;
+    background:linear-gradient(180deg, #6fd0ff 0%, #27b0f2 50%, #129ae0 51%, #1fb3f5 100%);
+    box-shadow:0 4px 0 var(--ciano-escuro), 0 8px 16px rgba(14,146,218,.25), inset 0 1px 0 rgba(255,255,255,.65);
+    text-shadow:0 1px 0 rgba(0,0,0,.18);
+    transition:transform 180ms var(--ease-entra), box-shadow 180ms var(--ease-entra);
+  }
+  .btn:active { transform:translateY(3px); box-shadow:0 1px 0 var(--ciano-escuro), 0 3px 8px rgba(14,146,218,.22), inset 0 1px 0 rgba(255,255,255,.65); transition-duration:60ms; }
+  .btn.lima { background:linear-gradient(180deg, #b3ec5c 0%, #8fd826 50%, #79c210 51%, #8ad41f 100%); box-shadow:0 4px 0 var(--lima-escuro), 0 8px 16px rgba(110,180,20,.25), inset 0 1px 0 rgba(255,255,255,.65); }
+  .btn.lima:active { box-shadow:0 1px 0 var(--lima-escuro), inset 0 1px 0 rgba(255,255,255,.65); }
+  .btn.branco { color:var(--ciano-escuro); text-shadow:none; background:linear-gradient(180deg, #fff 0%, #f6fafd 50%, #e8f1f8 51%, #fff 100%); box-shadow:0 4px 0 #c6d6e3, 0 6px 12px rgba(25,80,125,.1), inset 0 1px 0 #fff; }
+  .btn.branco:active { box-shadow:0 1px 0 #c6d6e3, inset 0 1px 0 #fff; }
+  .btn.pequeno { padding:7px 14px; font-size:13px; }
+
+  /* ===== Mundo de cupons ===== */
+  .mundo { position:relative; }
+  .cena {
+    position:relative; height:340px; overflow-x:auto; overflow-y:hidden; border-radius:20px;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.06); scrollbar-width:thin; overscroll-behavior-x:contain;
+  }
+  .palco {
+    position:relative; height:100%; min-width:100%;
+    background:linear-gradient(180deg, #6cc8fb 0%, #a9defd 34%, #d6f0ff 52%);
+  }
+  /* cenário (CSS art): colinas ao fundo, planície, flores e água */
+  .colinas { position:absolute; left:0; right:0; top:62px; height:60px;
+    background:radial-gradient(ellipse 50% 100% at 50% 100%, #9be284 0 97%, transparent 100%) 0 0 / 260px 60px repeat-x,
+               radial-gradient(ellipse 50% 100% at 50% 100%, #b8eba5 0 97%, transparent 100%) 130px 14px / 300px 46px repeat-x; }
+  .chao { position:absolute; left:0; right:0; top:104px; bottom:24px;
+    background:radial-gradient(circle at 24px 22px, rgba(255,255,255,.45) 0 2px, transparent 3px) 0 0 / 96px 74px,
+               radial-gradient(circle at 70px 56px, rgba(255,236,120,.6) 0 2px, transparent 3px) 0 0 / 96px 74px,
+               linear-gradient(180deg, #7cd664 0%, #62c34b 100%);
+    box-shadow:inset 0 3px 0 rgba(255,255,255,.35); }
+  .agua { position:absolute; left:0; right:0; bottom:0; height:26px;
+    background:repeating-linear-gradient(90deg, rgba(255,255,255,.4) 0 18px, transparent 18px 46px) 0 9px / 100% 3px no-repeat,
+               linear-gradient(180deg, #4fb8ef, #2f9bd8); box-shadow:inset 0 3px 0 #3c8f2e; }
+  .nuvens { position:absolute; inset:0 0 auto 0; height:80px; pointer-events:none; }
+  .nuvem { position:absolute; width:70px; height:22px; border-radius:22px; background:#fff; opacity:.95;
+    box-shadow:18px -10px 0 4px #fff, 40px -2px 0 0 #fff; }
+
+  .trilha { position:absolute; left:0; top:0; z-index:1; overflow:visible; }
+  .seg-trancado { fill:none; stroke:rgba(255,255,255,.8); stroke-width:4; stroke-linecap:round; stroke-dasharray:1 12; }
+  .seg-aberto { opacity:0; }
+  .seg.aberto .seg-aberto { opacity:1; }
+  .seg-aberto .borda { fill:none; stroke:#c99a4b; stroke-width:21; stroke-linecap:round; }
+  .seg-aberto .miolo { fill:none; stroke:#f3dca2; stroke-width:15; stroke-linecap:round; }
+  .ponto { fill:#fff; stroke:#e2bd6e; stroke-width:1.2; opacity:0; transform-box:fill-box; transform-origin:center; }
+  .seg.aberto .ponto { opacity:1; }
+
+  /* nós (fases) */
+  .no {
+    position:absolute; z-index:3; width:60px; height:60px; margin:-30px 0 0 -30px; padding:0;
+    border:0; background:none; cursor:pointer; font:900 22px Nunito, "Segoe UI", sans-serif;
+    transition:transform 200ms var(--ease-entra);
+  }
+  @media (hover:hover) { .no:not(.inicio):hover { transform:translateY(-3px); } }
+  .no-face {
+    position:absolute; inset:0; border-radius:50%; display:grid; place-items:center; border:4px solid #fff;
+    box-shadow:0 5px 0 rgba(0,0,0,.2), 0 9px 16px rgba(0,0,0,.14), inset 0 2px 0 rgba(255,255,255,.55);
+    transition:transform 180ms var(--ease-entra), box-shadow 180ms var(--ease-entra);
+  }
+  .no:active .no-face { transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.2), 0 3px 6px rgba(0,0,0,.12), inset 0 2px 0 rgba(255,255,255,.55); transition-duration:60ms; }
+  .no-face-trancada { background:linear-gradient(180deg, #ccd6de 0%, #aab7c2 50%, #96a4b0 51%, #b3bfc9 100%); }
+  .no-face-liberada { color:#7a4f00; background:linear-gradient(180deg, #ffe873 0%, #ffcc1a 50%, #f2b400 51%, #ffd84a 100%); }
+  .no.liberado .no-face-trancada, .no:not(.liberado) .no-face-liberada { opacity:0; }
+  .no.inicio { cursor:default; }
+  .no.inicio .no-face { color:#fff; background:linear-gradient(180deg, #6fd0ff 0%, #27b0f2 50%, #129ae0 51%, #1fb3f5 100%); }
+  .no[aria-expanded="true"] .no-face { box-shadow:0 0 0 4px var(--ciano), 0 5px 0 rgba(0,0,0,.2), inset 0 2px 0 rgba(255,255,255,.55); }
+  .arco { transform-box:view-box; transform-origin:16px 11px; }
+  .no-anel { position:absolute; inset:-4px; border-radius:50%; border:4px solid var(--ouro); opacity:0; pointer-events:none; }
+  .no-estrela {
+    position:absolute; top:-10px; right:-10px; width:26px; height:26px; border-radius:50%; display:grid; place-items:center;
+    font-size:13px; color:#fff; background:var(--ciano); border:3px solid #fff; box-shadow:0 2px 0 rgba(0,0,0,.15);
+    opacity:0; transform:scale(.6);
+  }
+  .no.resgatado .no-estrela { opacity:1; transform:none; }
+  .no-rotulo {
+    position:absolute; top:calc(100% + 10px); left:50%; transform:translateX(-50%); max-width:130px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:2px 10px; border-radius:999px;
+    font-size:12px; font-weight:800; color:var(--tinta); background:rgba(255,255,255,.94); box-shadow:0 1px 3px rgba(0,0,0,.12);
+  }
+  /* próxima fase: tracejado estático + quanto falta (sem pulsar) */
+  .no.proximo .no-face-trancada { outline:3px dashed rgba(255,255,255,.95); outline-offset:4px; }
+  .no-falta {
+    position:absolute; bottom:calc(100% + 12px); left:50%; transform:translateX(-50%); white-space:nowrap;
+    padding:3px 10px; border-radius:999px; font-size:12px; font-weight:900; color:#fff;
+    background:var(--lima-escuro); box-shadow:0 2px 0 rgba(0,0,0,.15); display:none;
+  }
+  .no.proximo .no-falta { display:block; }
+  .bandeira { position:absolute; z-index:2; width:4px; height:120px; background:#5b6b78; border-radius:2px; }
+  .bandeira::before { content:""; position:absolute; left:4px; top:6px; border-left:40px solid var(--lima); border-top:15px solid transparent; border-bottom:15px solid transparent; }
+  .bandeira::after { content:""; position:absolute; left:-6px; top:-12px; width:16px; height:16px; border-radius:50%; background:var(--ouro); box-shadow:inset -2px -2px 0 #e0a800; }
+
+  /* avatar: posição (JS) > flutuação (CSS) > salto ao andar (JS) */
+  .avatar { position:absolute; left:0; top:0; z-index:5; width:40px; height:62px; pointer-events:none; offset-anchor:20px 86px; offset-rotate:0deg; }
+  .avatar-flutua { animation:flutuar 1.8s var(--ease-flutua) infinite alternate; }
+  .avatar-salto svg { display:block; margin:0 auto; filter:drop-shadow(0 2px 0 rgba(0,0,0,.18)); }
+  .avatar-sombra-pos { position:absolute; left:8px; right:8px; bottom:0; height:8px; }
+  .avatar-sombra { height:100%; border-radius:50%; background:rgba(0,0,0,.32); animation:sombra 1.8s var(--ease-flutua) infinite alternate; }
+  .avatar.andando .avatar-flutua, .avatar.andando .avatar-sombra,
+  .mundo.fora-da-tela .avatar-flutua, .mundo.fora-da-tela .avatar-sombra { animation-play-state:paused; }
+  @keyframes flutuar { to { transform:translateY(-6px); } }
+  @keyframes sombra { to { transform:scaleX(.76); opacity:.55; } }
+
+  .moeda {
+    position:absolute; z-index:6; width:24px; height:24px; margin:-12px 0 0 -12px; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle at 35% 35%, #fff6b0, #ffcc1a 55%, #e0a800); border:2px solid #b98600;
+  }
+
+  /* balão da fase: nasce do nó clicado (transform-origin na ponta da seta) */
+  .balao {
+    position:absolute; z-index:20; width:250px; padding:14px 16px 16px; border-radius:20px;
+    background:rgba(255,255,255,.92); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    border:1px solid #fff; box-shadow:0 14px 34px rgba(25,80,125,.24), inset 0 1px 0 #fff;
+    transform-origin:var(--seta, 50%) 100%;
+    visibility:hidden; pointer-events:none; opacity:0; filter:blur(2px);
+    transform:translate(-50%, -100%) translateY(4px) scale(.97);
+    transition:transform 150ms var(--ease-sai), opacity 130ms var(--ease-sai), filter 130ms var(--ease-sai), visibility 0s linear 150ms;
+  }
+  .balao::after {
+    content:""; position:absolute; top:100%; left:var(--seta, 50%); margin-left:-10px;
+    border:10px solid transparent; border-top-color:rgba(255,255,255,.95); border-bottom:0;
+  }
+  .balao.preparando { transition:none; filter:blur(4px); transform:translate(-50%, -100%) translateY(10px) scale(.86); }
+  .balao.aberto {
+    visibility:visible; pointer-events:auto; opacity:1; filter:none; transform:translate(-50%, -100%);
+    transition:transform 480ms var(--mola), opacity 200ms var(--ease-entra), filter 200ms var(--ease-entra), visibility 0s;
+  }
+  .balao.instantaneo { transition:none !important; }
+  .balao-topo { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+  .selo { padding:3px 10px; border-radius:10px; font-size:12px; font-weight:900; color:#fff; background:#a9b6c1; }
+  .selo.liberada { color:#7a4f00; background:var(--ouro); }
+  .estado { font-size:12px; font-weight:800; color:var(--suave); }
+  .balao b { display:block; font-size:16px; font-weight:900; line-height:1.2; }
+  .balao p { margin:2px 0 12px; font-size:13px; font-weight:700; color:var(--suave); }
+  .balao-rodape { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .custo { font-weight:900; color:var(--ciano-escuro); }
+  .balao small { font-size:12px; font-weight:800; color:var(--suave); text-align:right; }
+
+  .pular {
+    position:absolute; z-index:15; top:76px; right:30px;
+    opacity:0; visibility:hidden; transform:translateY(-4px);
+    transition:opacity 160ms var(--ease-sai), transform 160ms var(--ease-sai), visibility 0s linear 160ms;
+  }
+  .pular.visivel { opacity:1; visibility:visible; transform:none; transition:opacity 220ms var(--ease-entra), transform 220ms var(--ease-entra), visibility 0s; }
+
+  /* faixa de progresso (Value Change: número conta, barra cresce com scaleX) */
+  .progresso { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-top:14px; padding:14px 18px; border-radius:20px; background:#fff; box-shadow:inset 0 0 0 1px var(--linha); }
+  .progresso-txt { flex:1; min-width:220px; }
+  .progresso-txt b { display:block; font-size:16px; font-weight:900; }
+  .progresso-txt small { color:var(--suave); font-weight:700; }
+  .barra { height:12px; margin-top:8px; border-radius:6px; background:#e8eef3; overflow:hidden; box-shadow:inset 0 1px 2px rgba(25,80,125,.12); }
+  .barra i { display:block; height:100%; border-radius:6px; transform-origin:left; transform:scaleX(0);
+    background:linear-gradient(180deg, #b3ec5c, #79c210); transition:transform 700ms var(--ease-entra); }
+  .saldo { text-align:right; }
+  .saldo b { display:block; font-size:28px; font-weight:900; color:var(--ciano-escuro); line-height:1; font-variant-numeric:tabular-nums; }
+  .saldo small { color:var(--suave); font-weight:700; font-size:12px; }
+
+  /* simulador (só no protótipo) */
+  .sim { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .sim label { display:flex; gap:8px; align-items:center; font-size:13px; font-weight:800; margin-left:auto; cursor:pointer; }
+
+  /* diálogo: expande a partir do botão que o abriu (JS) */
+  dialog {
+    width:min(400px, calc(100vw - 32px)); padding:24px; border:1px solid #fff; border-radius:28px;
+    background:var(--vidro); color:var(--tinta); box-shadow:0 20px 60px rgba(25,80,125,.3);
+  }
+  dialog::backdrop { background:rgba(200,225,245,.55); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
+  dialog[open]::backdrop { animation:fundo 240ms var(--ease-entra); }
+  @keyframes fundo { from { opacity:0; } }
+  dialog h2 { margin-bottom:6px; }
+  .codigo { display:flex; justify-content:center; gap:4px; margin:12px 0 18px; padding:16px; border-radius:18px; font-size:30px; font-weight:900; color:var(--ciano-escuro); background:#fff; box-shadow:inset 0 0 0 2px var(--ciano-claro); }
+  .codigo span { display:inline-block; }
+  .acoes { display:flex; justify-content:flex-end; }
+
+  /* ===== Movimento reduzido: estados finais, sem deslocamento ===== */
+  @media (prefers-reduced-motion:reduce) {
+    *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; transition-delay:0s !important; }
+  }
+  .sem-movimento *, .sem-movimento *::before, .sem-movimento *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; transition-delay:0s !important; }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="bloco">
+    <div class="cab">
+      <h2>Simulador do protótipo</h2>
+      <p class="dica">Dados falsos no mesmo formato de <code>GET /api/eu</code>. Nada aqui chama o servidor.</p>
+    </div>
+    <div class="sim">
+      <button class="btn lima" data-deposito="30">+30 pontos</button>
+      <button class="btn lima" data-deposito="150">+150 pontos</button>
+      <button class="btn lima" data-deposito="600">+600 pontos</button>
+      <button class="btn branco" id="recomecar">Recomeçar</button>
+      <label><input type="checkbox" id="simReduzido"> Simular movimento reduzido</label>
+    </div>
+  </div>
+
+  <section class="bloco mundo" id="mundo" aria-labelledby="mundoTitulo">
+    <div class="cab">
+      <h2 id="mundoTitulo"><i class="ico"></i>Mundo de cupons</h2>
+      <span class="dica" id="mundoResumo"></span>
+    </div>
+    <div class="cena" id="cena">
+      <div class="palco" id="palco">
+        <div class="colinas"></div><div class="chao"></div><div class="agua"></div>
+        <div class="nuvens" id="nuvens"></div>
+        <svg class="trilha" id="trilha" height="340" aria-hidden="true"></svg>
+        <div id="nos"></div>
+        <div class="avatar" id="avatar">
+          <div class="avatar-sombra-pos" id="sombraPos"><div class="avatar-sombra"></div></div>
+          <div class="avatar-flutua"><div class="avatar-salto" id="salto"></div></div>
+        </div>
+      </div>
+    </div>
+    <button class="btn branco pequeno pular" id="pular">Pular animação</button>
+    <div class="balao" id="balao" role="group" aria-label="Detalhes da fase"></div>
+    <div class="progresso">
+      <div class="progresso-txt"><b id="pTitulo"></b><small id="pSub"></small><div class="barra"><i id="pBarra"></i></div></div>
+      <div class="saldo"><b id="pSaldo">0</b><small>pontos de saldo</small></div>
+    </div>
+    <p class="sr" aria-live="polite" id="anunciador"></p>
+  </section>
+</div>
+
+<dialog id="dlgCodigo">
+  <h2>Cupom resgatado!</h2>
+  <p class="dica" id="codigoMarca"></p>
+  <div class="codigo" id="codigo"></div>
+  <div class="acoes"><button class="btn" id="fecharCodigo">Fechar</button></div>
+</dialog>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const semMovimento = () => document.documentElement.classList.contains('sem-movimento') ||
+                           matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// As mesmas curvas do CSS, para a Web Animations API (com plano B onde linear() não existe)
+const raizCss = getComputedStyle(document.documentElement);
+const temLinear = CSS.supports('transition-timing-function', 'linear(0, 1)');
+const EASE = {
+  entra: 'cubic-bezier(.22, 1, .36, 1)',
+  sai: 'cubic-bezier(.55, 0, 1, .45)',
+  mola: temLinear ? raizCss.getPropertyValue('--mola').trim() : 'cubic-bezier(.34, 1.4, .64, 1)',
+  molaViva: temLinear ? raizCss.getPropertyValue('--mola-viva').trim() : 'cubic-bezier(.34, 1.8, .64, 1)',
+};
+
+/* ---------- avatar em pixel art (12x16), o mesmo do projeto ---------- */
+const SPRITE = (() => {
+  const px = ['...GGGGG....', '..GGGGWGGGG.', '..HHHSSKS...', '.HSHSSSKSSS.', '.HSHHSSSKSSS', '.HHSSSSKKKK.',
+              '...SSSSSSS..', '..GGBGGG....', '.GGGBGGBGGG.', 'GGGGBBBBGGGG', 'SSGBYBBYBGSS', 'SSSBBBBBBSSS',
+              'SSBBBBBBBBSS', '..BBB..BBB..', '.OOO....OOO.', 'OOOO....OOOO'];
+  const cor = {G:'#2fb24c', W:'#fff', H:'#6b3e1f', S:'#f6c9a0', K:'#1d1d1d', B:'#1e7fd8', Y:'#ffd21f', O:'#7a4320'};
+  let r = '';
+  px.forEach((linha, y) => [...linha].forEach((c, x) => {
+    if (cor[c]) r += `<rect x="${x}" y="${y}" width="1.04" height="1.04" fill="${cor[c]}"/>`;
+  }));
+  return w => `<svg viewBox="0 0 12 16" width="${w}" height="${w * 4 / 3}" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
+})();
+const CADEADO = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path class="arco" d="M8 11V7.5a4 4 0 0 1 8 0V11" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><rect x="5" y="10.5" width="14" height="10.5" rx="2.5" fill="#fff"/></svg>';
+
+/* =====================================================================
+   Componente: Mundo de cupons (World Map)
+   Entrada: o JSON de GET /api/eu (fases, fase_atual, pontos_totais...).
+   ===================================================================== */
+function criarMundo({aoResgatar}) {
+  const raiz = $('mundo'), cena = $('cena'), palco = $('palco'), svg = $('trilha'), camadaNos = $('nos');
+  const avatar = $('avatar'), salto = $('salto'), sombraPos = $('sombraPos'), balao = $('balao');
+  const PASSO = 150, MARGEM = 90, ALTURA = 340, BASE = 178, AMPL = 56, RAIO = 30, GAP = 17;
+  let pts = [], segs = [], fases = [], dados = null, atual = 0, alvo = 0;
+  let emSequencia = false, pulando = false, aberto = null;
+  const rodando = new Set(), esperas = new Set();
+
+  salto.innerHTML = SPRITE(36);
+  const posicao = i => ({x: MARGEM + i * PASSO, y: BASE - Math.round(Math.sin(i * 1.1 + .4) * AMPL)});
+
+  // Catmull-Rom -> Bézier: curva suave passando por todos os nós
+  function curva(i) {
+    const p0 = pts[Math.max(i - 1, 0)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(i + 2, pts.length - 1)];
+    const c1 = {x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6};
+    const c2 = {x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6};
+    return `M${p1.x},${p1.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${p2.x},${p2.y}`;
+  }
+
+  // ---- utilitários de animação: tudo que roda pode ser concluído de uma vez por "Pular" ----
+  function rodar(el, quadros, opcoes) {
+    const a = el.animate(quadros, opcoes);
+    rodando.add(a);
+    a.finished.catch(() => {}).finally(() => rodando.delete(a));
+    return a;
+  }
+  function esperar(ms) {
+    if (pulando || semMovimento()) return Promise.resolve();
+    return new Promise(ok => {
+      const fim = () => { clearTimeout(t); esperas.delete(fim); ok(); };
+      const t = setTimeout(fim, ms);
+      esperas.add(fim);
+    });
+  }
+  function pular() {
+    pulando = true;
+    rodando.forEach(a => a.finish());
+    esperas.forEach(fim => fim());
+  }
+
+  const noEl = k => camadaNos.querySelector(`.no[data-k="${k}"]`);
+  const posAvatar = p => `translate(${p.x - 20}px, ${p.y - 86}px)`;   // pés na borda de cima do nó
+  function posicionarAvatar(p) { avatar.style.transform = posAvatar(p); }
+  function centralizar(x, suave) {
+    cena.scrollTo({left: x - cena.clientWidth / 2, behavior: suave && !semMovimento() ? 'smooth' : 'auto'});
+  }
+
+  // ---- desenho ----
+  function desenhar(de) {
+    const n = fases.length;
+    pts = Array.from({length: n + 1}, (_, i) => posicao(i));
+    const largura = MARGEM + n * PASSO + 190;
+    palco.style.width = largura + 'px';
+    svg.setAttribute('width', largura);
+    svg.setAttribute('viewBox', `0 0 ${largura} ${ALTURA}`);
+    svg.innerHTML = pts.slice(0, -1).map((_, i) => {
+      const d = curva(i);
+      return `<g class="seg ${i < de ? 'aberto' : ''}" data-s="${i}"><path class="seg-trancado" d="${d}"/>
+        <g class="seg-aberto"><path class="borda" d="${d}"/><path class="miolo" d="${d}"/></g><g class="pontos"></g></g>`;
+    }).join('');
+    segs = [...svg.querySelectorAll('.seg-trancado')];
+    // pontinhos (estilo Mario): espaçados igualmente, longe dos nós
+    svg.querySelectorAll('.seg').forEach((g, i) => {
+      const s = segs[i], L = s.getTotalLength(), ini = RAIO + 8, util = L - 2 * ini;
+      const q = Math.max(2, Math.floor(util / GAP) + 1);
+      let h = '';
+      for (let j = 0; j < q; j++) {
+        const p = s.getPointAtLength(ini + j * util / (q - 1));
+        h += `<circle class="ponto" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.4"/>`;
+      }
+      g.querySelector('.pontos').innerHTML = h;
+    });
+
+    let nuvens = '';
+    for (let i = 0; i * 250 < largura; i++) nuvens += `<div class="nuvem" style="left:${40 + i * 250 + (i % 3) * 40}px;top:${18 + (i % 2) * 30}px"></div>`;
+    $('nuvens').innerHTML = nuvens;
+
+    camadaNos.innerHTML =
+      `<div class="no inicio" style="left:${pts[0].x}px;top:${pts[0].y}px"><span class="no-face">★</span><span class="no-rotulo">Início</span></div>` +
+      fases.map((f, i) => {
+        const k = i + 1, q = pts[k];
+        return `<button class="no ${k <= de ? 'liberado' : ''} ${f.resgates ? 'resgatado' : ''}" data-k="${k}"
+            style="left:${q.x}px;top:${q.y}px" aria-expanded="false" aria-controls="balao">
+          <span class="no-anel"></span>
+          <span class="no-face no-face-trancada">${CADEADO}</span>
+          <span class="no-face no-face-liberada">${k}</span>
+          <span class="no-estrela" aria-hidden="true">★</span>
+          <span class="no-rotulo">${esc(f.marca)}</span>
+          <span class="no-falta"></span></button>`;
+      }).join('') +
+      `<div class="bandeira" style="left:${pts[n].x + 110}px;top:${pts[n].y - 100}px"></div>`;
+    rotular();
+    atual = de;
+    posicionarAvatar(pts[de]);
+    marcarProximo();
+    centralizar(pts[de].x, false);
+  }
+
+  function rotular() {
+    camadaNos.querySelectorAll('button.no').forEach(no => {
+      const k = +no.dataset.k, f = fases[k - 1];
+      no.setAttribute('aria-label', `Fase ${k}: ${f.marca}, ${no.classList.contains('liberado') ? 'liberada' : 'trancada'}` +
+                                    (f.resgates ? `, resgatada ${f.resgates} vez(es)` : ''));
+    });
+  }
+
+  function marcarProximo() {
+    camadaNos.querySelectorAll('.no.proximo').forEach(e => e.classList.remove('proximo'));
+    const prox = noEl(atual + 1);
+    if (!prox || !dados) return;
+    const falta = fases[atual].custo - dados.pontos_totais;
+    if (falta <= 0) return;   // vai ser liberada nesta sequência
+    prox.classList.add('proximo');
+    prox.querySelector('.no-falta').textContent = `faltam ${falta} pts`;
+  }
+
+  // ---- sequência de desbloqueio: caminho se preenche > avatar anda > cadeado abre ----
+  function revelarSegmento(i) {
+    const g = svg.querySelector(`.seg[data-s="${i}"]`);
+    g.classList.add('aberto');   // estado final já aplicado; as animações partem do estado anterior
+    if (pulando || semMovimento()) return Promise.resolve();
+    const pontos = [...g.querySelectorAll('.ponto')];
+    const total = pontos.length * 45 + 320;
+    rodar(g.querySelector('.seg-aberto'), [{opacity: 0}, {opacity: 1}], {duration: total, easing: EASE.entra, fill: 'backwards'});
+    pontos.forEach((p, j) => rodar(p, [{opacity: 0, transform: 'scale(.3)'}, {opacity: 1, transform: 'scale(1)'}],
+                                   {duration: 320, delay: j * 45, easing: EASE.mola, fill: 'backwards'}));
+    return esperar(total * .75);   // o avatar sai antes do último ponto pousar (offset, não fila)
+  }
+
+  function andarSegmento(i) {
+    const seg = segs[i], L = seg.getTotalLength(), fim = pts[i + 1];
+    if (pulando || semMovimento()) { posicionarAvatar(fim); return Promise.resolve(); }
+    const dur = Math.min(1100, Math.max(600, L * 3.4)), passos = Math.max(2, Math.round(L / 38));
+    // o avatar segue a própria curva da estrada (offset-path), no compositor
+    avatar.classList.add('andando');
+    avatar.style.transform = 'none';
+    avatar.style.offsetPath = `path("${seg.getAttribute('d')}")`;
+    centralizar(fim.x, true);
+    const anda = rodar(avatar, [{offsetDistance: '0%'}, {offsetDistance: '100%'}],
+                       {duration: dur, easing: 'cubic-bezier(.65, 0, .35, 1)', fill: 'forwards'});
+    // pulinhos: sobe desacelerando, desce acelerando; a sombra encolhe no ar
+    const pulo = {duration: dur / passos, iterations: passos};
+    rodar(salto, [{transform: 'none', easing: EASE.entra}, {transform: 'translateY(-7px)', offset: .5, easing: EASE.sai}, {transform: 'none'}], pulo);
+    rodar(sombraPos, [{transform: 'none', easing: EASE.entra}, {transform: 'scaleX(.7)', offset: .5, easing: EASE.sai}, {transform: 'none'}], pulo);
+    return anda.finished.catch(() => {}).then(() => {
+      posicionarAvatar(fim);
+      avatar.style.offsetPath = '';
+      anda.cancel();
+      avatar.classList.remove('andando');
+    });
+  }
+
+  function liberarNo(k) {
+    const no = noEl(k);
+    no.classList.add('liberado');
+    atual = k;
+    rotular();
+    marcarProximo();
+    anunciar(`Fase ${k} liberada: ${fases[k - 1].marca}!`);
+    if (pulando || semMovimento()) return Promise.resolve();
+    // o arco do cadeado gira para fora, o cadeado some e o número salta no lugar
+    rodar(no.querySelector('.arco'), [{transform: 'none'}, {transform: 'translateY(-3px) rotate(-30deg)'}],
+          {duration: 220, easing: EASE.entra, fill: 'forwards'});
+    rodar(no.querySelector('.no-face-trancada'),
+          [{opacity: 1, transform: 'scale(1)', filter: 'blur(0)'}, {opacity: 0, transform: 'scale(.85)', filter: 'blur(3px)'}],
+          {duration: 200, delay: 180, easing: EASE.sai, fill: 'backwards'});
+    rodar(no.querySelector('.no-face-liberada'), [{opacity: 0, transform: 'scale(.6)'}, {opacity: 1, transform: 'scale(1)'}],
+          {duration: 560, delay: 260, easing: EASE.molaViva, fill: 'backwards'});
+    rodar(no.querySelector('.no-anel'), [{opacity: .8, transform: 'scale(.9)'}, {opacity: 0, transform: 'scale(1.7)'}],
+          {duration: 650, delay: 240, easing: EASE.entra});
+    soltarMoeda(pts[k], 300);
+    return esperar(520);
+  }
+
+  function soltarMoeda(p, atraso) {
+    const m = document.createElement('div');
+    m.className = 'moeda';
+    m.style.cssText = `left:${p.x}px;top:${p.y - 44}px`;
+    palco.append(m);
+    rodar(m, [{opacity: 0, transform: 'translateY(0) scale(.7) rotateY(0)'},
+              {opacity: 1, offset: .2},
+              {opacity: 0, transform: 'translateY(-56px) scale(1) rotateY(540deg)'}],
+          {duration: 720, delay: atraso, easing: EASE.entra, fill: 'backwards'}).finished.finally(() => m.remove());
+  }
+
+  async function sequencia() {
+    if (emSequencia) return;
+    emSequencia = true;
+    fecharBalao(true);
+    $('pular').classList.add('visivel');
+    while (atual < alvo) {
+      const k = atual + 1;
+      await revelarSegmento(k - 1);
+      await andarSegmento(k - 1);
+      await liberarNo(k);
+    }
+    $('pular').classList.remove('visivel');
+    pulando = false;
+    emSequencia = false;
+  }
+
+  // ---- balão da fase ----
+  function abrirBalao(k, instantaneo, focar = instantaneo) {
+    const no = noEl(k), f = fases[k - 1], liberada = k <= atual, u = dados.usuario;
+    let acao;
+    if (!liberada) acao = `<small>Faltam ${f.custo - dados.pontos_totais} pontos acumulados</small>`;
+    else if (f.resgatavel) acao = `<button class="btn lima pequeno" data-resgatar="${f.id}">Resgatar</button>`;
+    else acao = `<small>Saldo: ${u.pontos} de ${f.custo}</small>`;
+    balao.innerHTML = `<div class="balao-topo"><span class="selo ${liberada ? 'liberada' : ''}">Fase ${k}</span>
+        <span class="estado">${liberada ? (f.resgates ? `Resgatada ${f.resgates}x` : 'Liberada') : 'Trancada'}</span></div>
+      <b>${esc(f.marca)}</b><p>${esc(f.descricao)}</p>
+      <div class="balao-rodape"><span class="custo">${f.custo} pts</span>${acao}</div>`;
+    // posição relativa ao bloco, presa às bordas; a seta continua apontando para o nó
+    const r = raiz.getBoundingClientRect(), n = no.getBoundingClientRect();
+    const cx = n.left + n.width / 2 - r.left, meia = 125;
+    const left = Math.min(Math.max(cx, meia + 8), r.width - meia - 8);
+    balao.style.left = left + 'px';
+    balao.style.top = (n.top - r.top - 14) + 'px';
+    balao.style.setProperty('--seta', (cx - left + meia) + 'px');
+    if (aberto && aberto !== k) noEl(aberto)?.setAttribute('aria-expanded', 'false');
+    no.setAttribute('aria-expanded', 'true');
+    aberto = k;
+    balao.classList.toggle('instantaneo', instantaneo || semMovimento());
+    balao.classList.remove('aberto');
+    balao.classList.add('preparando');
+    balao.offsetWidth;   // aplica o estado inicial antes de animar
+    balao.classList.remove('preparando');
+    balao.classList.add('aberto');
+    if (focar) balao.querySelector('button')?.focus();
+  }
+
+  function fecharBalao(instantaneo) {
+    if (!aberto) return;
+    noEl(aberto)?.setAttribute('aria-expanded', 'false');
+    aberto = null;
+    balao.classList.toggle('instantaneo', !!instantaneo || semMovimento());
+    balao.classList.remove('aberto');
+  }
+
+  // ---- eventos ----
+  camadaNos.addEventListener('click', e => {
+    const no = e.target.closest('button.no');
+    if (!no || emSequencia) return;
+    const k = +no.dataset.k, viaTeclado = e.detail === 0;   // teclado: sem animação
+    aberto === k ? fecharBalao(viaTeclado) : abrirBalao(k, viaTeclado);
+  });
+  balao.addEventListener('click', e => {
+    const b = e.target.closest('[data-resgatar]');
+    if (b) aoResgatar(+b.dataset.resgatar, b, e.detail === 0);
+  });
+  document.addEventListener('pointerdown', e => {
+    if (aberto && !balao.contains(e.target) && !e.target.closest('button.no')) fecharBalao();
+  });
+  raiz.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && aberto) { const k = aberto; fecharBalao(true); noEl(k)?.focus(); return; }
+    const no = e.target.closest?.('button.no');
+    if (!no || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return;   // direcional como no GamePad
+    e.preventDefault();
+    noEl(+no.dataset.k + (e.key === 'ArrowRight' ? 1 : -1))?.focus();
+  });
+  cena.addEventListener('scroll', () => {
+    if (aberto && !emSequencia) fecharBalao(true);
+    // parallax leve: as nuvens andam mais devagar que o chão
+    $('nuvens').style.transform = semMovimento() ? '' : `translateX(${cena.scrollLeft * .35}px)`;
+  }, {passive: true});
+  $('pular').addEventListener('click', pular);
+  // flutuação pausada quando o mapa não está na tela
+  new IntersectionObserver(([e]) => raiz.classList.toggle('fora-da-tela', !e.isIntersecting)).observe(cena);
+
+  // ---- faixa de progresso ----
+  function contar(el, valor) {
+    cancelAnimationFrame(el._conta);
+    const de = +el.textContent || 0;
+    if (de === valor || semMovimento()) { el.textContent = valor; return; }
+    let t0 = null;
+    const q = agora => {
+      t0 ??= agora;
+      const t = Math.min(1, Math.max(0, (agora - t0) / 600)), e = 1 - Math.pow(1 - t, 3);
+      el.textContent = Math.round(de + (valor - de) * e);
+      if (t < 1) el._conta = requestAnimationFrame(q);
+    };
+    el._conta = requestAnimationFrame(q);
+  }
+  function resumo(p) {
+    const n = p.fases.length, prox = p.proximo_cupom;
+    $('mundoResumo').textContent = `${p.fase_atual} de ${n} fases liberadas`;
+    const anterior = p.fase_atual ? p.fases[p.fase_atual - 1].custo : 0;
+    const frac = prox ? (p.pontos_totais - anterior) / (prox.custo - anterior) : 1;
+    $('pBarra').style.transform = `scaleX(${Math.max(0, Math.min(1, frac))})`;
+    $('pTitulo').textContent = prox ? `Faltam ${p.faltam_pontos} pontos para liberar ${prox.marca}` : 'Você liberou todas as fases!';
+    $('pSub').textContent = prox ? `Cerca de ${p.faltam_itens} itens reciclados · ${p.pontos_totais} pontos acumulados`
+                                 : `${p.pontos_totais} pontos acumulados · toque numa fase para resgatar`;
+    contar($('pSaldo'), p.usuario.pontos);
+  }
+  function anunciar(msg) { $('anunciador').textContent = msg; }
+
+  return {
+    // de: fase em que o avatar estava na última visita (o projeto já guarda isso no localStorage)
+    iniciar(p, de = p.fase_atual) {
+      dados = p; fases = p.fases; alvo = p.fase_atual;
+      desenhar(Math.min(de, alvo));
+      resumo(p);
+      if (alvo > atual) sequencia();
+    },
+    atualizar(p) {
+      dados = p;
+      if (p.fases.length !== fases.length) { fases = p.fases; desenhar(Math.min(atual, p.fase_atual)); }
+      fases = p.fases;
+      camadaNos.querySelectorAll('button.no').forEach(no => {
+        const f = fases[no.dataset.k - 1], novo = f.resgates && !no.classList.contains('resgatado');
+        no.classList.toggle('resgatado', !!f.resgates);
+        if (novo && !semMovimento()) rodar(no.querySelector('.no-estrela'), [{opacity: 0, transform: 'scale(.6)'}, {opacity: 1, transform: 'scale(1)'}],
+                                           {duration: 520, delay: 200, easing: EASE.molaViva, fill: 'backwards'});
+      });
+      rotular();
+      resumo(p);
+      if (aberto && !emSequencia) abrirBalao(aberto, true, false);   // só atualiza o conteúdo
+      alvo = p.fase_atual;
+      marcarProximo();
+      if (alvo > atual) sequencia();
+    },
+    fecharBalao,
+  };
+}
+
+/* ---------- diálogo que nasce do botão de origem ---------- */
+function abrirDeOrigem(dlg, origem, instantaneo) {
+  dlg.showModal();
+  if (instantaneo || semMovimento() || !origem?.isConnected) return;
+  const o = origem.getBoundingClientRect(), d = dlg.getBoundingClientRect();
+  const dx = o.left + o.width / 2 - (d.left + d.width / 2), dy = o.top + o.height / 2 - (d.top + d.height / 2);
+  dlg.animate([{transform: `translate(${dx}px, ${dy}px) scale(.5)`}, {transform: 'none'}], {duration: 520, easing: EASE.mola});
+  dlg.animate([{opacity: 0, filter: 'blur(6px)'}, {opacity: 1, filter: 'blur(0)'}], {duration: 220, easing: EASE.entra});
+}
+function fecharAnimado(dlg, instantaneo) {
+  if (instantaneo || semMovimento()) return dlg.close();
+  const a = dlg.animate([{opacity: 1, transform: 'none'}, {opacity: 0, transform: 'translateY(6px) scale(.97)'}],
+                        {duration: 150, easing: EASE.sai, fill: 'forwards'});
+  a.onfinish = () => { dlg.close(); a.cancel(); };
+}
+
+/* =====================================================================
+   Simulação do back-end (mesmas regras de GET /api/eu e POST /api/resgatar)
+   ===================================================================== */
+const CUPONS = [
+  {id: 1, marca: 'Café Verde', descricao: '10% de desconto no café', custo: 100},
+  {id: 2, marca: 'Cinema Mais', descricao: 'Ingresso 2x1', custo: 250},
+  {id: 3, marca: 'Mercado Bom Preço', descricao: 'R$ 10 de desconto', custo: 400},
+  {id: 4, marca: 'Bike Sampa', descricao: '1 dia de bike grátis', custo: 600},
+  {id: 5, marca: 'Livraria Folha', descricao: '20% em livros', custo: 900},
+  {id: 6, marca: 'Pizzaria Forno', descricao: 'Pizza média grátis', custo: 1500},
+];
+let estado;
+const recomecar = () => estado = {total: 120, saldo: 120, resgates: {}};
+function apiEu() {
+  const {total, saldo, resgates} = estado;
+  const fases = CUPONS.map((c, i) => ({...c, fase: i + 1, liberada: total >= c.custo, resgatavel: saldo >= c.custo, resgates: resgates[c.id] || 0}));
+  const prox = fases.find(f => !f.liberada) || null, faltam = prox ? prox.custo - total : 0;
+  return {usuario: {nome: 'Ana', pontos: saldo}, pontos_totais: total, fases,
+          fase_atual: fases.filter(f => f.liberada).length, proximo_cupom: prox, faltam_pontos: faltam,
+          faltam_itens: Math.ceil(faltam / 10)};
+}
+
+const mundo = criarMundo({
+  aoResgatar(id, botao, viaTeclado) {
+    const c = CUPONS.find(x => x.id === id);
+    if (estado.saldo < c.custo) return;
+    estado.saldo -= c.custo;
+    estado.resgates[id] = (estado.resgates[id] || 0) + 1;
+    const codigo = Math.random().toString(16).slice(2, 10).toUpperCase();
+    $('codigoMarca').textContent = `${c.marca}: ${c.descricao}`;
+    $('codigo').innerHTML = [...codigo].map(ch => `<span>${ch}</span>`).join('');
+    abrirDeOrigem($('dlgCodigo'), botao, viaTeclado);
+    // código "digitado" letra a letra: evento raro, pode ter mais personalidade
+    if (!viaTeclado && !semMovimento()) $('codigo').querySelectorAll('span').forEach((s, i) =>
+      s.animate([{opacity: 0, transform: 'translateY(8px)'}, {opacity: 1, transform: 'none'}],
+                {duration: 360, delay: 220 + i * 40, easing: EASE.mola, fill: 'backwards'}));
+    mundo.atualizar(apiEu());
+  },
+});
+
+$('fecharCodigo').addEventListener('click', e => fecharAnimado($('dlgCodigo'), e.detail === 0));
+document.querySelectorAll('[data-deposito]').forEach(b => b.addEventListener('click', () => {
+  const pts = +b.dataset.deposito;
+  estado.total += pts;
+  estado.saldo += pts;
+  mundo.atualizar(apiEu());
+}));
+$('recomecar').addEventListener('click', () => { recomecar(); mundo.iniciar(apiEu()); });
+$('simReduzido').addEventListener('change', e => document.documentElement.classList.toggle('sem-movimento', e.target.checked));
+
+recomecar();
+mundo.iniciar(apiEu());
+</script>
+</body>
+</html>
