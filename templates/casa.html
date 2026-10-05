@@ -294,8 +294,8 @@ a{color:inherit;text-decoration:none}
 (function () {
 'use strict';
 
-/* Falas da praça. Para usar as do banco, defina window.MCCREA_FALAS (uma lista de textos)
-   num script antes deste. Sem isso, valem as falas de exemplo abaixo. */
+/* Falas soltas da praça. Para usar as do banco, defina window.MCCREA_FALAS (uma lista de textos)
+   num script antes deste. Sem isso, valem as falas de exemplo abaixo. As conversas (CONVERSAS) não mudam. */
 const FALAS = (Array.isArray(window.MCCREA_FALAS) && window.MCCREA_FALAS.length) ? window.MCCREA_FALAS : [
   'Reciclei 10kg hoje!',
   'Este ponto na Paulista está limpo!',
@@ -310,8 +310,83 @@ const FALAS = (Array.isArray(window.MCCREA_FALAS) && window.MCCREA_FALAS.length)
   'Bora reciclar junto amanhã?',
   'Lata amassada também vale ponto.',
   'Primeira vez aqui, gostei!',
-  'Juntei garrafa a semana inteira.'
+  'Juntei garrafa a semana inteira.',
+  'Garrafa PET vale 10 pontos!',
+  'Vidro vale 20 pontos no McCrea!',
+  'Papel também vale ponto!',
+  'Cheguei na fase 4 do mapa de cupons!',
+  'Reciclar vira desconto!',
+  'Já tenho 300 pontos no McCrea.',
+  'Juntei as latas da festa!',
+  'Hoje é dia de trocar cupom!',
+  'Bora encher a máquina hoje?',
+  'O McCrea achou a máquina perto de casa.'
 ];
+/* Conversas: falas que se alternam entre duas pessoas do mesmo grupo, uma resposta depois da outra.
+   Cada bairro tem as suas; as "gerais" acontecem em qualquer lugar, menos na escola (lá as crianças
+   têm as próprias). Os números seguem o McCrea: PET 10, lata 15, vidro 20 e papel 5 pontos. */
+const CONVERSAS = {
+  geral: [
+    ['Como o McCrea sabe o que eu reciclei?', 'Infravermelho e câmera leem o material.', 'E os pontos caem no app na hora!'],
+    ['Quanto vale uma lata?', '15 pontos. E vidro vale 20!', 'Vou juntar os potes de geleia, então.'],
+    ['Passei pra fase 3 do mapa de cupons!', 'Qual cupom liberou?', 'R$ 10 de desconto no Mercado Bom Preço.'],
+    ['Por que o nome McCrea?', 'É o comandante do filme WALL-E.', 'O que trouxe todo mundo de volta pra Terra!'],
+    ['Reciclar dá mesmo desconto?', 'Dá! Cada item vira ponto, e ponto vira cupom.'],
+    ['Sabia que o Brasil recicla só 8,7% do lixo?', 'Com máquina na esquina isso muda.'],
+    ['Quase toda lata no Brasil é reciclada.', 'Porque ela vale dinheiro na hora!', 'O McCrea faz isso com toda embalagem.'],
+    ['Preciso lavar a embalagem?', 'Uma enxaguada rápida já ajuda.'],
+    ['Juntei 1.500 pontos!', 'Dá pra pizza grátis na Pizzaria Forno!', 'O jantar hoje é por conta da reciclagem.'],
+    ['Onde fica a máquina mais perto?', 'O McCrea calcula pelo endereço da sua casa.', 'Sem GPS ligado? Gostei!'],
+    ['Minha vó não tinha onde reciclar.', 'Agora tem máquina McCrea perto da casa dela.'],
+    ['Tampinha vai no plástico?', 'Vai, sim: tampinha também é plástico.'],
+  ],
+  praca: [
+    ['Que praça limpa hoje!', 'Todo mundo leva as garrafas pra máquina.'],
+    ['Quem quer trocar dicas?', 'Eu! Amasse a lata: cabe mais na máquina.', 'E vale os mesmos 15 pontos!'],
+  ],
+  civico: [
+    ['Vou no Banco de Cupons trocar meus pontos.', 'Já dá pro ingresso 2x1 do Cinema Mais?', 'Dá! Custa 250 e eu tenho 310.'],
+    ['Leu na banca? A lei exige logística reversa.', 'É a Lei 12.305, de 2010.', 'E cada máquina é um ponto de entrega oficial.'],
+    ['Até 2029, um ponto de entrega a cada 10 mil pessoas.', 'Então vai ter máquina McCrea em todo bairro!'],
+    ['Só 2,85% do lixo de SP vem da coleta seletiva.', 'E a meta era 10%... bora ajudar!'],
+    ['A prefeitura cedeu lugar pra mais máquinas.', 'Menos lixo indo pro aterro!'],
+  ],
+  casas: [
+    ['Separou o lixo da semana?', 'Papel, PET e lata, tudo separado.', 'Amanhã levo na máquina antes do trabalho.'],
+    ['Cadastrei o endereço de casa no McCrea.', 'E ele já mostrou a máquina mais próxima?', 'A 800 metros! Dá pra ir a pé.'],
+    ['Meu filho que pediu pra gente reciclar.', 'Aprendeu na Escola McCrea?', 'Agora ele confere até as tampinhas!'],
+    ['Aqui em casa somos em cinco.', 'É muita embalagem virando ponto!'],
+  ],
+  reciclagem: [
+    ['Coloquei a garrafa e a tela mostrou: PET!', 'É a visão computacional reconhecendo.', '+10 pontos na hora!'],
+    ['Essa máquina está quase cheia.', 'O painel avisa e o coletador vem esvaziar.'],
+    ['Pra onde vai tudo isso?', 'Pras cooperativas, já separado.', 'Fica bem mais fácil fazer a triagem.'],
+    ['Quantas máquinas o McCrea tem?', 'Olha no mapa: aparecem todas lá.'],
+    ['A máquina registra até o bairro?', 'Registra item, material, data e local.', 'Mas o meu nome a marca não vê.'],
+  ],
+  comercio: [
+    ['Paguei o café com garrafa PET!', 'Como assim?', 'Cupom de 10% do Café Verde, com 100 pontos.'],
+    ['Vim aqui só por causa do cupom.', 'Eu também nunca tinha entrado nessa loja.', 'É assim que a loja ganha cliente novo.'],
+    ['Qual o próximo cupom do meu mapa?', 'Bike Sampa: um dia de bike grátis.', 'Faltam só 120 pontos!'],
+    ['A Livraria Folha dá 20% com o McCrea.', 'Vou trocar meus 900 pontos lá!'],
+    ['A loja paga alguma coisa pro McCrea?', 'Só quando o cupom vira venda.'],
+    ['Por que tem loja "Em breve"?', 'Ainda faltam marcas parceiras no bairro.'],
+  ],
+  escola: [
+    ['Azul é papel, vermelho é plástico!', 'Verde é vidro e amarelo é metal!', 'E marrom é o orgânico!'],
+    ['Amassa a lata que cabe mais!', 'E ainda vale os mesmos pontos!'],
+    ['Minha mãe ganhou pizza com o McCrea!', 'Com as garrafas que você juntou?', 'Foi! A pizza foi minha ideia.'],
+    ['A professora disse que a lata volta a ser lata.', 'Igual mágica!'],
+    ['Bora fazer gincana de reciclagem?', 'Quem juntar mais garrafa ganha!'],
+  ],
+  parque: [
+    ['Que bom ver o parque sem lixo.', 'As garrafas agora vão pra máquina.'],
+    ['Vim de Bike Sampa, cupom do McCrea!', 'Pedalar e reciclar: dupla perfeita.'],
+    ['Cada garrafa na máquina é uma a menos no lago.', 'E ainda vira ponto!'],
+    ['Trouxe a garrafinha da caminhada.', 'Na volta passa na máquina: 10 pontos!'],
+  ],
+};
+const CHANCE_CONVERSA = .65;   // parte dos balões abre uma conversa; o resto é fala solta
 const PESSOAS = 62;      // gente conversando em grupos
 const PASSEANDO = 8;     // gente andando pelo caminho
 const VELOCIDADE = 21;   // px por segundo (andar devagar)
@@ -1496,10 +1571,11 @@ document.getElementById('zMais').addEventListener('click', () => voarPara({ x: c
 document.getElementById('zMenos').addEventListener('click', () => voarPara({ x: cam.x, y: cam.y, z: cam.z / 1.5 }, 380));
 document.getElementById('zPraca').addEventListener('click', () => voarPara(PRACA));
 
-/* ---------- falas pontuais ---------- */
-const bubbles = [];
-let recent = [], bubbleClock = .3, seeded = 0;
+/* ---------- falas pontuais e conversas ---------- */
+const bubbles = [], respostas = [];
+let recent = [], roteirosRecentes = [], bubbleClock = .3, seeded = 0;
 const maxBubbles = () => vw < 640 ? 2 : vw < 1050 ? 3 : 4;
+const tempoDeLeitura = t => Math.min(7.2, Math.max(4.2, 2.6 + t.length * .07));   // segundos de balão
 
 function layoutBubble(b) {
   const [sx, sy] = toScreen(b.who.x, b.who.y - 50 * b.who.k);
@@ -1508,25 +1584,57 @@ function layoutBubble(b) {
   b.el.style.transform = `translate(${r1(left)}px,${r1(sy)}px)`;
   b.box.style.setProperty('--tx', r1(Math.min(Math.max(sx - left, 16), w - 16)) + 'px');
 }
-function say() {
-  if (bubbles.length >= maxBubbles() || cam.z < .55) return;   // de longe ninguém lê
-  const cand = people.filter(a => {
-    if (a.st !== 'chat' || a.spot.members.length < 2 || a.said) return false;
-    const [sx, sy] = toScreen(a.x, a.y - 50);
-    if (sx < 86 || sx > vw - 86 || sy < 150 || sy > vh - 104) return false;
-    return !bubbles.some(b => Math.abs(b.sx - sx) < 200 && Math.abs(b.sy - sy) < 78);
-  });
-  if (!cand.length) return;
-  const a = pick(cand), pool = FALAS.filter(f => !recent.includes(f)), text = pick(pool.length ? pool : FALAS);
-  recent.push(text); if (recent.length > Math.min(6, FALAS.length - 1)) recent.shift();
+function naTela(a) {   // onde o balão da pessoa ficaria, ou null se cair fora da área livre da tela
+  const [sx, sy] = toScreen(a.x, a.y - 50);
+  return sx < 86 || sx > vw - 86 || sy < 150 || sy > vh - 104 ? null : [sx, sy];
+}
+function falar(a, text, conversa = null) {
   const el = document.createElement('div'); el.className = 'bubble';
   const box = document.createElement('div'); box.textContent = text; el.appendChild(box); talks.appendChild(el);
-  const life = rnd(4.4, 6.4), b = { el, box, who: a, life };
+  const life = tempoDeLeitura(text), b = { el, box, who: a, life, conversa };
   const s = a.spot;
   if (s.speaker && s.speaker !== a) s.speaker.el.classList.remove('talk');
   s.speaker = a; s.timer = life; a.said = true; a.t = Math.max(a.t, life + 1.5);
   a.el.classList.add('talk', 'said');
+  const ouvinte = conversa && conversa.falantes.find(p => p !== a);
+  if (ouvinte) { ouvinte.el.classList.add('nod'); setTimeout(() => ouvinte.el.classList.remove('nod'), 1300); }
   layoutBubble(b); bubbles.push(b);
+}
+function say() {
+  if (bubbles.length >= maxBubbles() || cam.z < .55) return;   // de longe ninguém lê
+  const cand = people.filter(a => {
+    if (a.st !== 'chat' || a.spot.members.length < 2 || a.said || a.conversa) return false;
+    const p = naTela(a);
+    return p && !bubbles.some(b => Math.abs(b.sx - p[0]) < 200 && Math.abs(b.sy - p[1]) < 78);
+  });
+  if (!cand.length) return;
+  const a = pick(cand), s = a.spot;
+  const ouvintes = s.members.filter(m => m !== a && !m.said && !m.conversa);
+  const roteiros = (CONVERSAS[s.zona] || []).concat(s.kids ? [] : CONVERSAS.geral);
+  if (!calm && ouvintes.length && roteiros.length && Math.random() < CHANCE_CONVERSA) {
+    const livres = roteiros.filter(r => !roteirosRecentes.includes(r)), linhas = pick(livres.length ? livres : roteiros);
+    roteirosRecentes.push(linhas); if (roteirosRecentes.length > 10) roteirosRecentes.shift();
+    const b = pick(ouvintes), conversa = { linhas, i: 0, falantes: [a, b], spot: s };
+    // os dois ficam no grupo até a última fala e se viram um para o outro
+    const total = linhas.reduce((n, l) => n + tempoDeLeitura(l) + .5, 2);
+    for (const p of conversa.falantes) { p.conversa = conversa; p.t = Math.max(p.t, total); }
+    face(a, b.x < a.x); face(b, a.x < b.x);
+    falar(a, linhas[0], conversa);
+    return;
+  }
+  const pool = FALAS.filter(f => !recent.includes(f)), text = pick(pool.length ? pool : FALAS);
+  recent.push(text); if (recent.length > Math.min(6, FALAS.length - 1)) recent.shift();
+  falar(a, text);
+}
+function encerrar(conversa) { for (const p of conversa.falantes) if (p.conversa === conversa) p.conversa = null; }
+function responder(conversa) {   // a próxima fala vai para o outro lado da conversa
+  const i = conversa.i + 1, quem = conversa.falantes[i % 2];
+  if (i >= conversa.linhas.length || quem.st !== 'chat' || quem.spot !== conversa.spot || quem.said || !naTela(quem) || cam.z < .55) {
+    encerrar(conversa);
+    return;
+  }
+  conversa.i = i;
+  falar(quem, conversa.linhas[i], conversa);
 }
 function ageBubbles(dt) {
   for (let i = bubbles.length - 1; i >= 0; i--) {
@@ -1535,7 +1643,11 @@ function ageBubbles(dt) {
       bubbles.splice(i, 1);
       b.who.said = false; b.who.el.classList.remove('said');
       b.el.classList.add('out'); setTimeout(() => b.el.remove(), 260);
+      if (b.conversa) respostas.push({ conversa: b.conversa, em: .35 });   // pausa curta antes da resposta
     }
+  }
+  for (let i = respostas.length - 1; i >= 0; i--) {
+    if ((respostas[i].em -= dt) <= 0) responder(respostas.splice(i, 1)[0].conversa);
   }
   bubbleClock -= dt;
   if (bubbleClock <= 0) { say(); bubbleClock = seeded++ < 3 ? .55 : rnd(2.2, 4.4); }
