@@ -82,11 +82,9 @@ a{color:inherit;text-decoration:none}
 .p.talk:not(.said) .dots{display:flex}
 @keyframes dot{0%,100%{transform:translateY(0);opacity:.55}40%{transform:translateY(-2.5px);opacity:1}}
 
-/* selos flutuantes (bolhas redondas com ícone) */
-.pin{z-index:8800}
-.pin > svg{left:-56px;top:-127px;width:112px;height:134px;filter:drop-shadow(0 8px 9px rgba(80,40,45,.30));animation:float 3.6s ease-in-out infinite alternate}
-.pin:nth-of-type(odd) > svg{animation-duration:4.3s}
-@keyframes float{from{transform:translateY(0)}to{transform:translateY(-7px)}}
+/* carrossel da tela das máquinas: o anúncio novo entra deslizando de leve e cobre o anterior */
+.anuncio.entra{animation:entra .6s cubic-bezier(.2,.8,.2,1) both}
+@keyframes entra{from{opacity:0;transform:translateX(7px)}to{opacity:1;transform:none}}
 
 /* lâmpadas do letreiro do cinema */
 .bulb{animation:tw 1.3s steps(1) infinite}
@@ -99,7 +97,6 @@ a{color:inherit;text-decoration:none}
 .noite .glow > svg,.noite .lampada{animation:acende 1.3s linear var(--d,0s) both}
 @keyframes acende{0%,8%{opacity:.08}11%{opacity:.9}15%{opacity:.15}24%{opacity:1}28%{opacity:.3}40%,100%{opacity:1}}
 .noite .p > svg{filter:brightness(.7) saturate(.8)}
-.noite .pin > svg{filter:brightness(.8) drop-shadow(0 8px 9px rgba(10,10,40,.35))}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:.8s}
 
 /* ---------- balões de fala ---------- */
@@ -167,7 +164,7 @@ a{color:inherit;text-decoration:none}
 @media (max-width:380px){.auth{gap:6px}.btn{padding:0 11px;font-size:13px}.tabs{gap:5px;padding:6px}.tab{width:54px}}
 
 @media (prefers-reduced-motion: reduce){
-  .p *, .pin > svg, .bulb, .dots b, .bubble > div, .glow > svg, .lampada{animation:none !important}
+  .p *, .bulb, .dots b, .bubble > div, .glow > svg, .lampada, .anuncio{animation:none !important}
 }
 </style>
 </head>
@@ -371,8 +368,6 @@ function caixa(Q, x0, x1, y0, y1, z0, z1, c, top) {
          poly([Q(x0, y0, z1), Q(x1, y0, z1), Q(x1, y1, z1), Q(x0, y1, z1)], top || lt(c, .22));
 }
 
-const RC = 'M-2.08,-4.4 L0,-8 L2.91,-2.96 M0.49,-4.36 L2.91,-2.96 L2.91,-5.76';
-const recycle = (c, sw = 2.3) => `<g fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><path d="${RC}"/><path d="${RC}" transform="rotate(120)"/><path d="${RC}" transform="rotate(240)"/></g>`;
 
 /* ---------- fachadas ---------- */
 const VIDRO = '#5E6B8C', MADEIRA = '#7A3E2A';
@@ -481,6 +476,29 @@ const cineTopo = (b, zt) => {
   return faceL(P, b.x0, b.y1, zt, m) + caixa(P, 43.4, 48.4, -2.8, -1.4, 0, .45, '#6E5560');   // degraus da entrada
 };
 
+/* Banco de Cupons: colunas, letreiro verde, porta de madeira, medalhão e cúpula dourados */
+const OURO = '#E0B23A', OURO_ESCURO = '#B8912F';
+const bancoFrente = (len, h) => {
+  let s = banda(len, 0, 2.7, '#2F6238') +
+    `<text x="${r2(len / 2)}" y="1.9" font-size="1.5" font-weight="900" text-anchor="middle" textLength="${r2(len - 2.2)}" lengthAdjust="spacingAndGlyphs" fill="#FFF3D6">BANCO DE CUPONS</text>`;
+  for (const u of [1.1, 3.9, len - 5, len - 2.2]) s += R(u, 2.7, 1.1, h - 3.7, '#FFF8EC') + R(u - .25, 2.7, 1.6, .55, '#E2D3B5') + R(u - .25, h - 1.55, 1.6, .55, '#E2D3B5');
+  s += janela(2.35, 4.6, 1.35, 3.6, { m: '#B89A6A', cruz: false }) + janela(len - 3.65, 4.6, 1.35, 3.6, { m: '#B89A6A', cruz: false });
+  s += `<circle cx="${r2(len / 2)}" cy="4.4" r="1.3" fill="${OURO}" stroke="#FFF3D6" stroke-width=".25"/><path d="${star(len / 2, 4.4, .85, .38)}" fill="#FFF3D6"/>`;
+  s += R(len / 2 - 1.3, 6.6, 2.6, h - 6.6, '#5A3A1E', 'rx=".3"') + R(len / 2 - 1, 7, 1, h - 7.4, '#7A5236') + R(len / 2 + .05, 7, 1, h - 7.4, '#7A5236');
+  return s + banda(len, h - 1, 1, '#D8C7AE');
+};
+const bancoLado = (len, h) => janela(1.3, 3.8, 1.8, 3.4, { m: '#B89A6A' }) + janela(len - 3.1, 3.8, 1.8, 3.4, { m: '#B89A6A' }) +
+  `<circle cx="${r2(len / 2)}" cy="5.6" r="1.7" fill="${OURO}" stroke="#FFF3D6" stroke-width=".3"/>` +
+  `<text x="${r2(len / 2)}" y="6.3" font-size="2" font-weight="900" text-anchor="middle" fill="#FFF3D6">$</text>` + banda(len, h - 1, 1, '#C9B898');
+const bancoTopo = (b, zt) => {
+  const [x, y] = P((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, zt);
+  return `<ellipse cx="${r1(x)}" cy="${r1(y)}" rx="24" ry="9.5" fill="${OURO_ESCURO}"/>` +
+    `<path d="M${r1(x - 20.5)} ${r1(y)} A20.5 23 0 0 1 ${r1(x + 20.5)} ${r1(y)} Z" fill="${OURO}"/>` +
+    `<path d="M${r1(x - 8)} ${r1(y - 15)} A20.5 23 0 0 1 ${r1(x + 2)} ${r1(y - 22)}" fill="none" stroke="#F6D777" stroke-width="2.6" stroke-linecap="round"/>` +
+    `<rect x="${r1(x - 1.1)}" y="${r1(y - 30)}" width="2.2" height="8" fill="${OURO_ESCURO}"/><circle cx="${r1(x)}" cy="${r1(y - 31)}" r="2.7" fill="${OURO}"/>` +
+    caixa(P, b.x0 + 5.4, b.x1 - 5.4, b.y1, b.y1 + 1.2, 0, .45, '#D8C7AE');   // degrau da porta
+};
+
 const PREDIOS = [
   // fundo à esquerda e atrás do cinema (só aparecem por cima e nos vãos)
   { x0: -62, x1: -20, y0: 38, y1: 72, h: 30, cor: '#C98A70', corR: '#E3AA8E', teto: '#B27A68' },
@@ -510,6 +528,9 @@ const PREDIOS = [
     topo: b => awnL(b, .8, 13, 9.4, ['#7FA347', '#F2E3C4'], 2.4, 1.2) },
   { x0: 37.4, x1: 54, y0: -15.8, y1: -2.8, h: 15, par: 1.1, cor: '#2E1D2A', corR: '#1F1422', teto: '#82373A', aro: '#A0443F', borda: 1,
     L: cineFrente, topo: cineTopo },
+  // Banco de Cupons, pequeno, logo à direita do cinema
+  { x0: 56, x1: 70, y0: -11, y1: -1.5, h: 11, cor: '#EDE3D1', corR: '#D6C8AE', teto: '#C9B48A', aro: '#E4D6B8',
+    L: bancoFrente, R: bancoLado, topo: bancoTopo },
   // cinza atrás, à direita do cinema
   { x0: 58, x1: 76, y0: -34, y1: -12, h: 30, cor: '#C29A8E', corR: '#A9847A', teto: '#8C7A80',
     L: (l, h) => { let s = ''; for (let v = 3; v < h - 3; v += 5) s += fileira(1.5, l - 1.5, v, 2.4, 3, 4, { m: '#9C7F78', v: '#7A8098' }); return s; } },
@@ -576,25 +597,65 @@ function sinal() {   // placa verde da esquina do fundo
     `<rect x="-8" y="-66" width="16" height="11" rx="1.6" fill="#3E8E55" stroke="#E8F2EA" stroke-width="1"/><path d="M-4 -60.5h8M-4 -58h5" stroke="#E8F2EA" stroke-width="1.1"/></g>`;
 }
 
+/* ---------- máquina McCrea (como no vídeo da máquina): tela com anúncios das marcas em carrossel ---------- */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const ANUNCIOS = [
+  { marca: 'Coca-Cola', serif: true, italico: true, fundo: '#F40009', tinta: '#FFFFFF', oferta: ['Lata 350 ml grátis'], sub: 'Recicle e libere o cupom no app', botao: ['#FFFFFF', '#C8102E'] },
+  { marca: 'ZARA', serif: true, espaco: 1.6, fundo: '#FFFFFF', tinta: '#141414', oferta: ['15% de desconto', 'na nova coleção'], sub: 'Troque seus pontos no app', subCor: '#5A5A5A', botao: ['#141414', '#FFFFFF'], pontos: '#8A8A8A' },
+  { marca: "McDonald's", fundo: '#FFC72C', tinta: '#27251F', marcaCor: '#DA291C', oferta: ['Casquinha grátis'], sub: 'Recicle e libere o cupom no app', botao: ['#27251F', '#FFFFFF'] },
+  { marca: 'iFood', fundo: '#EA1D2C', tinta: '#FFFFFF', oferta: ['R$ 15 de desconto', 'no seu pedido'], sub: 'Recicle e ganhe o cupom no app', botao: ['#FFFFFF', '#C8102E'] },
+  { marca: 'Carrefour', fundo: '#0E4DA4', tinta: '#FFFFFF', oferta: ['R$ 20 de desconto', 'nas compras'], sub: 'Troque seus pontos no app', botao: ['#FFFFFF', '#0E4DA4'] },
+  { marca: 'RENNER', espaco: .9, fundo: '#E3141B', tinta: '#FFFFFF', oferta: ['20% de desconto', 'em moda'], sub: 'Use seus pontos McCrea na loja', botao: ['#FFFFFF', '#C8102E'] },
+];
+const TELA_W = 57, TELA_H = 41, ESCALA_MAQ = 1.5;   // grande o bastante para ler o anúncio na praça
+const larga = (t, fs, max) => t.length * fs * .56 > max ? ` textLength="${max}" lengthAdjust="spacingAndGlyphs"` : '';
+function anuncio(i) {   // um slide, no tamanho da tela (57 × 41)
+  const a = ANUNCIOS[i], n = a.oferta.length, y0 = n > 1 ? 12.6 : 15.6, fs = 8.4;
+  let s = R(0, 0, TELA_W, TELA_H, a.fundo) +
+    `<text x="4" y="${y0}" font-size="${fs}" font-weight="${a.serif ? 700 : 900}"${a.serif ? ` font-family="Georgia, 'Times New Roman', serif"` : ''}` +
+    `${a.italico ? ' font-style="italic"' : ''} letter-spacing="${a.espaco || 0}" fill="${a.marcaCor || a.tinta}">${esc(a.marca)}</text>`;
+  a.oferta.forEach((l, k) => { s += `<text x="4" y="${r2(y0 + 6.6 + k * 5.8)}" font-size="5.3" font-weight="900" fill="${a.tinta}"${larga(l, 5.3, 49)}>${esc(l)}</text>`; });
+  s += `<text x="4" y="${r2(y0 + 6.6 + (n - 1) * 5.8 + 4.5)}" font-size="2.9" font-weight="700" fill="${a.subCor || a.tinta}"${larga(a.sub, 2.9, 49)}>${esc(a.sub)}</text>`;
+  s += `<rect x="4" y="${TELA_H - 8.6}" width="21" height="5.2" rx="2.6" fill="${a.botao[0]}"/>` +
+    `<text x="14.5" y="${TELA_H - 5.1}" font-size="2.6" font-weight="900" text-anchor="middle" fill="${a.botao[1]}">Toque para reciclar</text>`;
+  for (let k = 0; k < ANUNCIOS.length; k++) s += `<circle cx="${r2(38.5 + k * 2.6)}" cy="${TELA_H - 6}" r=".85" fill="${a.pontos || a.tinta}" opacity="${k === i ? 1 : .42}"/>`;
+  return s;
+}
+function maquinaMcCrea(id) {   // gabinete claro com volume, logo, tela, boca de depósito e os quatro materiais
+  const botoes = [['#E04848', 'PET', '#FFFFFF'], ['#EAB22A', 'LATA', '#4A3A10'], ['#2EA85A', 'VIDRO', '#FFFFFF'], ['#3C7EDB', 'PAPEL', '#FFFFFF']];
+  return shadow(7, 1, 64, 15) + `<g transform="scale(${ESCALA_MAQ})">` +
+    `<rect x="-30" y="-109" width="76" height="104" rx="8" fill="#BCCEC5"/>` +
+    `<polygon points="-30,-104 -22,-109 38,-109 30,-104" fill="#E4EDE8"/><polygon points="38,-96 46,-101 46,-13 38,-8" fill="#C3D3CB"/>` +
+    `<rect x="-38" y="-104" width="76" height="104" rx="8" fill="${grad('#F7FBF9', '#D9E5DF')}" stroke="#C8D8D0" stroke-width=".6"/>` +
+    `<text x="0" y="-92.5" text-anchor="middle" font-size="11" font-weight="900"><tspan fill="#123B2A">Mc</tspan><tspan fill="#1F9A55">Crea</tspan></text>` +
+    `<rect x="-32" y="-86" width="64" height="48" rx="5" fill="#1F2B27"/>` +
+    `<clipPath id="tela${id}"><rect width="${TELA_W}" height="${TELA_H}" rx="3"/></clipPath>` +
+    `<g class="tela" transform="translate(-28.5 -82.5)" clip-path="url(#tela${id})"></g>` +
+    `<rect x="-18.5" y="-33" width="37" height="15" rx="4.5" fill="none" stroke="#A8EBCB" stroke-width="3" opacity=".45"/>` +
+    `<rect x="-17.5" y="-32" width="35" height="13" rx="4" fill="#0F1714" stroke="#A8EBCB" stroke-width="1.2"/>` +
+    `<rect x="-12.5" y="-28" width="25" height="5" rx="2.5" fill="#000000"/>` +
+    `<text x="0" y="-13.4" text-anchor="middle" font-size="2.7" font-weight="800" fill="#5E6E66" textLength="62" lengthAdjust="spacingAndGlyphs">INFRAVERMELHO + VISÃO COMPUTACIONAL</text>` +
+    botoes.map(([c, t, tc], k) => { const x = -30 + k * 15.5; return `<rect x="${x}" y="-11" width="13.5" height="8" rx="2" fill="${c}"/>` +
+      `<text x="${r2(x + 6.75)}" y="-5" text-anchor="middle" font-size="2.9" font-weight="900" fill="${tc}">${t}</text>`; }).join('') +
+    `</g>`;
+}
+/* à noite a tela ilumina o chão em volta (fica escondida de dia, ver .glow) */
+const telaLuz = () => `<defs><radialGradient id="luzTela"><stop offset="0" stop-color="#BFE9FF" stop-opacity=".55"/><stop offset="1" stop-color="#BFE9FF" stop-opacity="0"/></radialGradient></defs>` +
+  `<ellipse cx="0" cy="-94" rx="110" ry="76" fill="url(#luzTela)"/>`;
+const MAQUINAS = [];
+function mostrarAnuncio(m, animar) {   // a tela é preenchida à parte: fica fora do tema noturno, sempre acesa
+  const tela = m.el.querySelector('.tela');
+  tela.innerHTML = animar && !calm ? `<g>${anuncio(m.ant)}</g><g class="anuncio entra">${anuncio(m.i)}</g>` : `<g>${anuncio(m.i)}</g>`;
+}
+function girarAnuncios() {
+  const agora = performance.now();
+  for (const m of MAQUINAS) if (agora >= m.prox) {
+    m.ant = m.i; m.i = (m.i + 1) % ANUNCIOS.length; m.prox = agora + 3200;
+    mostrarAnuncio(m, true);
+  }
+}
+
 /* ---------- objetos da praça ---------- */
-function lixeira(cor, simbolo = true) {   // contêiner alto; a boca e o símbolo ficam na frente (face L)
-  const a = -2.5, b = 2.5, c = -1.75, d = 1.75, h = 10, tampa = dk(cor, .1);
-  return poly([P0(a - .4, c), P0(b + .6, c), P0(b + .6, d + 2.2), P0(a - .4, d + 2.2)], 'rgba(100,45,40,.18)') +
-    caixa(P0, a, b, c, d, 0, h - .9, cor) + caixa(P0, a - .2, b + .2, c - .2, d + .2, h - .9, h, tampa, lt(cor, .2)) +
-    faceL(P0, a, d, h - .9, R(.7, 1, 3.6, 2.5, '#2A2230', 'rx=".5"') + R(.9, 1.2, 3.2, .5, 'rgba(0,0,0,.25)') +
-      (simbolo ? `<g transform="translate(2.5 5.6) scale(.21)">${recycle('#fff', 2.3)}</g>` : '')) +
-    `<path d="M${P0(a, d, h - .9).map(r1)} L${P0(b, d, h - .9).map(r1)} L${P0(b, c, h - .9).map(r1)}" fill="none" stroke="${lt(cor, .35)}" stroke-width="1.2" stroke-linejoin="round"/>`;
-}
-function maquina(cor, frente) {   // máquina McCrea: tela escura e símbolo na face da frente
-  const h = 8.6, tela = R(.5, 1, 2, 2.2, '#22303A', 'rx=".3"') + R(.75, 1.3, 1.5, 1.4, '#7FB0C8', 'rx=".2"') +
-    `<g transform="translate(1.5 5.4) scale(.13)">${recycle('#fff', 2.6)}</g>`;
-  return shadow(2, 3, 30, 10) + caixa(P0, -1.5, 1.5, -1.5, 1.5, 0, h, cor) + caixa(P0, -1.6, 1.6, -1.6, 1.6, h, h + .5, dk(cor, .15), lt(cor, .25)) +
-    (frente === 'R' ? faceR(P0, 1.5, 1.5, h, tela) : faceL(P0, -1.5, 1.5, h, tela));
-}
-const carrinho = () => shadow(2, 3, 36, 10) + caixa(P0, -2.6, 2.6, -1.6, 1.6, .5, 3.2, '#2E2B33', '#3B3842') +
-  faceL(P0, -2.6, 1.6, 3.2, `<g transform="translate(2.6 1.35) scale(.14)">${recycle('#fff', 2.4)}</g>`) +
-  `<ellipse cx="${r1(P0(0, 0, 3.4)[0])}" cy="${r1(P0(0, 0, 3.4)[1])}" rx="18" ry="9" fill="#3FA65A"/><ellipse cx="${r1(P0(0, 0, 3.4)[0] - 4)}" cy="${r1(P0(0, 0, 3.4)[1] - 3)}" rx="8" ry="3.5" fill="#62C27A"/>` +
-  [[-2, 1.6], [2, 1.6]].map(([x, y]) => { const [cx, cy] = P0(x, y, .4); return `<circle cx="${r1(cx)}" cy="${r1(cy)}" r="3" fill="#1E1C22"/>`; }).join('');
 function tree(tipo) {   // árvores da referência: bolas empilhadas, como topiaria
   const bola = (cy, r, dx = 0) => `<circle cx="${dx}" cy="${cy}" r="${r}" fill="url(#folha)"/>`;
   const tronco = h => `<rect x="-2.6" y="${-h}" width="5.2" height="${h + 1}" rx="1.8" fill="#7A4A30"/>`;
@@ -615,17 +676,6 @@ const mesaCafe = () => shadow(0, 2, 22, 7) +
   caixa(P0, -2.8, -1.6, -2.4, -1.2, 0, 2.2, '#5A3A22') + caixa(P0, 1.6, 2.8, 1.2, 2.4, 0, 2.2, '#5A3A22') +
   `<rect x="-1" y="-15" width="2" height="15" fill="#5A3A22"/><ellipse cx="0" cy="-15" rx="12" ry="5" fill="#8E5A34"/><ellipse cx="0" cy="-16" rx="12" ry="5" fill="#A86E42"/>`;
 
-/* selos: bolhas redondas com ícone (reciclagem e garrafa com joinha) */
-const BOLHA = `<path d="M36 1a32 32 0 0 1 9.3 62.6L36 81l-9.3-17.4A32 32 0 0 1 36 1z" fill="${grad('#FFFFFF', '#D3E3EC')}" stroke="#C3D5DF" stroke-width="1.2"/>` +
-  `<ellipse cx="27" cy="12" rx="13" ry="5.5" fill="rgba(255,255,255,.75)"/>`;
-const seloReciclar = BOLHA + `<g transform="translate(36 34) scale(2.55)">${recycle('#2C7A45', 4.2)}${recycle('#5DB86F', 2.5)}</g>`;
-const seloGarrafa = BOLHA + `<g transform="translate(18 9) scale(1.05)">
-  <rect x="5" y="1" width="9" height="5" rx="1.6" fill="#3FA65A" stroke="#1F5E66" stroke-width="1.2"/><rect x="6.5" y="5" width="6" height="7" fill="#CBE9F5" stroke="#1F5E66" stroke-width="1.4"/>
-  <rect x="2" y="11" width="15" height="30" rx="5" fill="#CBE9F5" stroke="#1F5E66" stroke-width="1.6"/><rect x="2.8" y="20" width="13.4" height="10" fill="#3FA65A"/>
-  <g transform="translate(9.5 25) scale(.32)">${recycle('#fff', 2.6)}</g>
-  <g transform="translate(13 19) scale(.95)"><path d="M2 10h4.4v11H2z" fill="#3FA65A" stroke="#1F5E66" stroke-width="1.2" stroke-linejoin="round"/>
-  <path d="M7.5 21h9.2c.9 0 1.7-.6 1.9-1.5l1.6-7c.3-1.3-.7-2.5-2-2.5H13l.7-3.6c.2-1.2-.7-2.4-2-2.4-.5 0-.9.3-1.2.7L7.5 10z" fill="#F6CDA5" stroke="#1F5E66" stroke-width="1.2" stroke-linejoin="round"/></g></g>`;
-
 /* ---------- atores: tudo que fica em pé na praça entra na ordem de profundidade ---------- */
 const ZB = 3000;   // base do z-index dos atores
 let noite = null;  // tema escuro ligado (definido em pintar)
@@ -634,10 +684,10 @@ function actor(cls, x, y, svg, vb) {
   const el = document.createElement('div');
   el.className = 'actor ' + cls;
   el.style.transform = `translate(${r1(x)}px,${r1(y)}px)`;
-  if (cls !== 'pin') el.style.zIndex = Math.round(y) + ZB;
+  el.style.zIndex = Math.round(y) + ZB;
   el.innerHTML = `<svg ${vb || 'width="1" height="1"'}>${noite ? noturno(svg) : svg}</svg>`;
   world.appendChild(el);
-  if (cls === 'prop' || cls === 'pin') ESTATICOS.push({ el: el.firstChild, dia: svg });
+  if (cls === 'prop') ESTATICOS.push({ el: el.firstChild, dia: svg });
   return el;
 }
 
@@ -714,33 +764,31 @@ const obstacles = [];
 const addObstacle = (g, r) => { const [x, y] = P(g[0], g[1]); obstacles.push({ x, y, r }); };
 const objeto = (gx, gy, svg, r = 10) => { const [x, y] = P(gx, gy); if (r) addObstacle([gx, gy], r); return actor('prop', x, y, svg); };
 
-// lixeiras: as três em fila (amarela, azul e verde), o par verde e azul e o carrinho
-objeto(60, 79, [-5, 0, 5].map((dx, i) => `<g transform="translate(${r1(dx * K)} ${r1(dx * S)})">${lixeira(['#F2B33D', '#4A78C2', '#4E9A47'][i], i > 0)}</g>`).join(''), 0);
-[55, 60, 65].forEach(x => addObstacle([x, 79], 24));
-objeto(79, 58.5, lixeira('#4A78C2'), 24);
-objeto(79.4, 63.8, lixeira('#4E9A47'), 24);
-objeto(96.4, 37.6, carrinho(), 26);
-objeto(17, 33.5, maquina('#4E8C45', 'R'), 18);
-objeto(36.9, 20.8, maquina('#7DA3C3', 'L'), 18);
+// só duas máquinas McCrea, bem afastadas (perto do Café Verde e no fim da trilha), cada uma num anúncio
+[[17, 33.5], [96.4, 37.6]].forEach(([gx, gy], k) => {
+  const el = objeto(gx, gy, maquinaMcCrea(k), 36), [x, y] = P(gx, gy);
+  actor('glow', x, y, telaLuz()).style.zIndex = Math.round(y) + ZB - 1;   // halo atrás da máquina: não desbota o anúncio
+  MAQUINAS.push({ el, x, y, i: k * 3 % ANUNCIOS.length, ant: 0, prox: performance.now() + 1600 + k * 1500 });
+});
+setInterval(() => { if (!document.hidden) girarAnuncios(); }, 250);
 objeto(4.6, 43.5, mesaCafe(), 12);
-objeto(62.5, 3.7, parquimetro(), 6);
+objeto(71.5, 3, parquimetro(), 6);
 [[-15.8, 58.7, 'bola'], [-8.1, 60.7, 'topiaria'], [-3, 58.4, 'moita'], [-10.5, 65, 'moita'], [1.3, 34.2, 'topiaria'], [-2.4, 11.5, 'topiaria'],
- [32.9, -1.6, 'topiaria'], [59.2, -8.6, 'bola'], [-7.4, 83, 'bola'], [142, 70, 'topiaria']].forEach(([gx, gy, t]) => objeto(gx, gy, tree(t), 14));
+ [32.9, -1.6, 'topiaria'], [-7.4, 83, 'bola'], [142, 70, 'topiaria']].forEach(([gx, gy, t]) => objeto(gx, gy, tree(t), 14));
 {
   const [x, y] = P(39.8, .6);
   actor('prop', x, y, poste()).style.cssText += '--d:.3s';
   const g = actor('glow', x, y, posteLuz());
-  g.style.cssText += '--d:.3s'; g.style.zIndex = 8790;   // acima das pessoas, abaixo dos selos
+  g.style.cssText += '--d:.3s'; g.style.zIndex = 8790;   // acima das pessoas
   addObstacle([39.8, .6], 8);
 }
-[[148, 257, seloReciclar], [303, 587, seloGarrafa], [1428, 405, seloGarrafa]].forEach(p => actor('pin', p[0], p[1], p[2], 'viewBox="0 0 72 86"'));
 
 /* pontos de encontro: onde os grupos conversam na referência */
 const SPOT_DEFS = [
-  { g: [8, 56], r: [26, 54], cap: 10 },     { g: [17, 33.5], r: [40, 62], cap: 9 },  { g: [9, 41], r: [20, 34], cap: 5 },
-  { g: [36.9, 20.8], r: [44, 70], cap: 10 }, { g: [50, 9], r: [40, 80], cap: 14 },    { g: [66, 3], r: [20, 34], cap: 5 },
-  { g: [40, 40], r: [30, 56], cap: 9 },     { g: [19, 71], r: [24, 46], cap: 7 },    { g: [60, 79], r: [62, 90], cap: 10 },
-  { g: [79.4, 61], r: [56, 82], cap: 9 },   { g: [96.4, 37.6], r: [38, 58], cap: 7 }, { g: [52, 93], r: [24, 46], cap: 7 },
+  { g: [8, 56], r: [26, 54], cap: 10 },     { g: [17, 33.5], r: [58, 80], cap: 9 },  { g: [9, 41], r: [20, 34], cap: 5 },
+  { g: [36.9, 20.8], r: [36, 64], cap: 10 }, { g: [50, 9], r: [40, 80], cap: 14 },    { g: [66, 3], r: [20, 34], cap: 5 },
+  { g: [40, 40], r: [30, 56], cap: 9 },     { g: [19, 71], r: [24, 46], cap: 7 },    { g: [60, 79], r: [34, 64], cap: 10 },
+  { g: [79.4, 61], r: [34, 62], cap: 9 },   { g: [96.4, 37.6], r: [58, 80], cap: 7 }, { g: [52, 93], r: [24, 46], cap: 7 },
   { g: [85, 74], r: [26, 48], cap: 7 },     { g: [76, 26], r: [24, 46], cap: 7 },    { g: [95, 13], r: [22, 42], cap: 6 },
   { g: [103, 72], r: [22, 40], cap: 6 },    { g: [19, 89], r: [20, 34], cap: 5 },    { g: [34, 97], r: [20, 34], cap: 5 },
   { g: [38.6, 80.7], r: [22, 40], cap: 6 }, { g: [42.6, 54], r: [22, 40], cap: 6 },  { g: [54.5, 25], r: [22, 40], cap: 6 },
@@ -868,6 +916,10 @@ function naTela(a) {   // onde o balão da pessoa ficaria, ou null se cair fora 
   const [sx, sy] = toScreen(a.x, a.y - 50);
   return sx < 86 || sx > vw - 86 || sy < 150 || sy > vh - 104 ? null : [sx, sy];
 }
+function cobreTela(a) {   // o balão dessa pessoa taparia o anúncio de alguma máquina?
+  const bx = 105 / escala, base = a.y - 50 * a.k, topo = base - 74 / escala;
+  return MAQUINAS.some(m => Math.abs(a.x - m.x) < bx + 50 && topo < m.y - 55 && base > m.y - 134);
+}
 function falar(a, text, conversa = null) {
   const el = document.createElement('div'); el.className = 'bubble';
   const box = document.createElement('div'); box.textContent = text; el.appendChild(box); talks.appendChild(el);
@@ -885,11 +937,11 @@ function say() {
   const cand = people.filter(a => {
     if (a.st !== 'chat' || a.spot.members.length < 2 || a.said || a.conversa) return false;
     const p = naTela(a);
-    return p && !bubbles.some(b => Math.abs(b.sx - p[0]) < 200 && Math.abs(b.sy - p[1]) < 78);
+    return p && !cobreTela(a) && !bubbles.some(b => Math.abs(b.sx - p[0]) < 200 && Math.abs(b.sy - p[1]) < 78);
   });
   if (!cand.length) return;
   const a = pick(cand), s = a.spot;
-  const ouvintes = s.members.filter(m => m !== a && !m.said && !m.conversa);
+  const ouvintes = s.members.filter(m => m !== a && !m.said && !m.conversa && !cobreTela(m));
   const roteiros = s.kids ? CONVERSAS.escola : ROTEIROS;
   if (!calm && ouvintes.length && roteiros.length && Math.random() < CHANCE_CONVERSA) {
     const livres = roteiros.filter(r => !roteirosRecentes.includes(r)), linhas = pick(livres.length ? livres : roteiros);
@@ -995,7 +1047,7 @@ function noturno(svg) {
     return luar(c);
   });
 }
-const DEFS_DIA = DEFS;   // todos os gradientes já foram criados (cenário, objetos e selos)
+const DEFS_DIA = DEFS;   // todos os gradientes já foram criados (cenário e objetos)
 ESTATICOS.push({ el: defsEl, dia: `<defs>${DEFS_DIA}</defs>` });
 
 const raiz = document.documentElement, btnTema = document.getElementById('btnTema');
@@ -1009,6 +1061,7 @@ function pintar() {
   noite = n;
   raiz.classList.toggle('noite', n);
   for (const s of ESTATICOS) s.el.innerHTML = n ? noturno(s.dia) : s.dia;
+  for (const m of MAQUINAS) mostrarAnuncio(m, false);
 }
 btnTema.addEventListener('click', () => {
   const novo = escuro() ? 'claro' : 'escuro';
