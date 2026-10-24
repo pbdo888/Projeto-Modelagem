@@ -30,7 +30,7 @@ nem cartão.
    
    O mapa não precisa de chave (a antiga `GOOGLE_MAPS_API_KEY` não é mais usada).
 
-3. Rode `python app.py` e abra http://localhost:5000
+3. Rode `python app.py` (o da raiz do projeto) e abra http://localhost:5050
 
 O banco `mccrea.db` é criado e populado com dados de exemplo (São Paulo) na primeira execução.
 Para recriá-lo, apague o arquivo. Para entrar, use por exemplo `ana@exemplo.com` com a senha `mccrea`
@@ -39,20 +39,20 @@ Para recriá-lo, apague o arquivo. Para entrar, use por exemplo `ana@exemplo.com
 
 ### Compartilhar com o professor
 
-**Nota importante:** `localhost:5000` só funciona na sua máquina. Para o professor acessar, escolha uma opção:
+**Nota importante:** `localhost:5050` só funciona na sua máquina. Para o professor acessar, escolha uma opção:
 
 #### Opção 1: Usar o IP local (mesma rede/WiFi)
 ```powershell
 ipconfig
 ```
-Procure pelo IPv4 (ex: `192.168.1.100`). O professor acessa: `http://192.168.1.100:5000`
+Procure pelo IPv4 (ex: `192.168.1.100`). O professor acessa: `http://192.168.1.100:5050`
 - ✅ Simples
 - ⚠️ Sua máquina precisa estar ligada com Flask rodando
 
 #### Opção 2: Usar ngrok (acesso remoto temporário)
 ```bash
 pip install ngrok
-ngrok http 5000
+ngrok http 5050
 ```
 Ele fornecerá um link público (ex: `https://abcd-1234-efgh.ngrok.io`)
 - ✅ Funciona de qualquer lugar do mundo
