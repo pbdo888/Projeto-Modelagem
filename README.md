@@ -67,21 +67,64 @@ token do admin, abra o serviço > **Environment**. Cada push no `main` faz um no
 - ⚠️ Plano free: dorme após 15 min sem acesso (o primeiro acesso leva ~1 min) e o disco é
   apagado a cada deploy/reinício, então cadastros, pontos e cartazes enviados voltam aos dados de demonstração
 
-## Estrutura
+### Testes
 
-- `db.py`: esquema (usuarios, funcionarios, maquinas, cupons, depositos, resgates, coletas, anuncios), migração e dados de exemplo
-- `static/cartazes/`: cartazes iniciais do carrossel de Notícias (slides da apresentação McCrea)
-- `uploads/anuncios/`: cartazes enviados pelo painel de admin (fora do git)
-- `app.py`: API REST e rota da página (Flask)
-- `planilha.py`: gera `planilhas/usuarios.xlsx` a partir do banco de dados (também roda sozinho: `python planilha.py`)
-- `index.html`: template da página (menu de blocos estilo Wii U: notícias, mapa, fases, conta e admin; diálogos de login/cadastro)
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+Os testes (pytest, formato AAA) passam por todas as rotas, como o navegador faria. Cada teste cria o app
+numa pasta temporária com banco próprio, então o `mccrea.db` de verdade nunca é tocado.
+
+## Estrutura (MVC)
+
+O código segue o padrão **MVC** (Model-View-Controller). Uma requisição faz este caminho:
+
+```
+navegador ──▶ controller (rota) ──▶ model (regras + banco) ──▶ controller ──▶ JSON ou view (HTML)
+```
+
+- `app.py`: ponto de entrada; `criar_app()` junta configuração, rotas, banco e planilha (`python app.py` ou `gunicorn app:app`)
+- `config.py`: configuração lida do ambiente / `.env` (`SECRET_KEY`, `ADMIN_TOKEN`, cookies, limite de upload)
+
+**Models (`models/`)**: regras de negócio, acesso ao SQLite e manipulação de dados. Não conhecem HTTP: recebem
+dados comuns e devolvem dados, ou levantam um erro de negócio que o controller transforma na resposta.
+- `banco.py`: conexão por requisição, esquema (usuarios, funcionarios, maquinas, cupons, depositos, resgates, coletas, anuncios), migração e criação do banco
+- `dados_exemplo.py`: dados de demonstração e os 13 cartazes iniciais (entram só num banco novo)
+- `regras.py`: pontos por material e distância até a máquina
+- `erros.py`: erros de negócio (`DadosInvalidos`, `NaoAutenticado`, `NaoEncontrado`, `Conflito`)
+- `validacao.py`: validação de campos de texto e de opções
+- `usuario.py` (`Usuario`): cadastro, login, endereço fixo e progresso nas fases do mapa de cupons
+- `maquina.py` (`Maquina`): máquinas ativas, cadastro e as mais próximas de um ponto
+- `deposito.py` (`Deposito`): leitura da máquina que vira pontos
+- `cupom.py` (`Cupom`): cupons das marcas parceiras e resgate com pontos
+- `anuncio.py` (`Anuncio`): notícias do carrossel e arquivos de cartaz
+- `analise.py` (`Analise`): números por bairro e por material
+- `planilha.py` (`Planilha`): gera `planilhas/usuarios.xlsx` a partir do banco (também roda sozinha, da raiz do projeto: `python -m models.planilha`)
+
+**Views (`views/` e `static/`)**: o front-end, entregue pelos controllers
+- `views/casa.html`: a Home (praça com as máquinas McCrea, carrossel de anúncios e Banco de Cupons)
+- `views/index.html`: o app (menu de blocos estilo Wii U: notícias, mapa, fases, conta e admin; diálogos de login/cadastro)
+- `views/admin_painel.html`: painel de administração, protegido por token
 - `static/css/mccrea.css`: visual (vidro, blocos, botões táteis), mundo de cupons e transições entre telas
 - `static/js/movimento.js`: curvas de animação, avisos e diálogos que abrem a partir do botão de origem (respeita `prefers-reduced-motion`)
 - `static/js/mundo.js`: mundo de cupons no estilo do mapa do Super Mario Bros. Wii (fases, caminho e avatar)
 - `static/js/app.js`: navegação entre telas (`#/inicio`, `#/mapa`, `#/fases`…), conta, mapa, notícias e painel de admin
-- `admin_painel.html`: painel de administração, protegido por token
+- `static/cartazes/`: cartazes iniciais do carrossel de Notícias (slides da apresentação McCrea)
+- `uploads/anuncios/`: cartazes enviados pelo painel de admin (fora do git)
+
+**Controllers (`controllers/`)**: recebem a requisição, chamam o Model e respondem com JSON ou com uma View
+- `__init__.py`: tabela de rotas (URL → controller), com os mesmos nomes de endpoint usados pelas views em `url_for()`
+- `autenticacao.py`: `@requer_admin` (header `X-Admin-Token`) e `@requer_login` (cookie de sessão)
+- `respostas.py`: respostas de erro `{"erro": ...}` e a tradução dos erros de negócio para 400/401/404/409/413
+- `paginas_controller.py` (`/` e `/app`), `conta_controller.py`, `maquinas_controller.py`, `depositos_controller.py`,
+  `cupons_controller.py`, `anuncios_controller.py` e `admin_controller.py` (painel, planilha e análise)
+
+**Outros**
+- `tests/`: testes das rotas (pytest, formato AAA)
 - `prototipo/mundo-cupons.html`: protótipo do mundo de cupons com dados simulados (abre direto no navegador)
-- `requirements.txt`: dependências Python do projeto
+- `requirements.txt`: dependências Python do projeto; `requirements-dev.txt`: as mesmas + pytest
 
 ## Pontos principais
 

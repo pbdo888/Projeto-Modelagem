@@ -1,26 +1,18 @@
-"""Banco de dados (SQLite): esquema e dados de exemplo para análise por localização."""
-import math
+"""
+Dados de demonstração: máquinas, usuários, funcionários, cupons, depósitos e os 13 cartazes
+iniciais do carrossel. Entram só num banco novo (veja models/banco.py, init_db).
+
+Senha de todos os usuários de exemplo (@exemplo.com): "mccrea".
+"""
 import random
-import sqlite3
 from datetime import datetime, timedelta
 
 from werkzeug.security import generate_password_hash
 
-DB_PATH = "mccrea.db"
-FMT = "%Y-%m-%d %H:%M:%S"
-PONTOS_MATERIAL = {"pet": 10, "lata": 15, "vidro": 20, "papel": 5}  # pontos por item
-PONTOS_ITEM_MEDIO = 10  # só para estimar "faltam N itens"
-SENHA_DEMO = "mccrea"  # senha dos usuários de exemplo (@exemplo.com)
+from models.regras import PONTOS_MATERIAL
 
-# Colunas do cadastro completo. Entram por ALTER TABLE para que bancos antigos sejam
-# atualizados sem perder dados.
-COLUNAS_CADASTRO = {
-    "senha_hash": "TEXT", "nascimento": "TEXT", "sexo": "TEXT", "estado_civil": "TEXT",
-    "telefone": "TEXT", "moradores": "INTEGER", "como_conheceu": "TEXT",
-    "aceita_ofertas": "INTEGER NOT NULL DEFAULT 0", "aceite_termos_em": "TEXT",
-    "cep": "TEXT", "logradouro": "TEXT", "numero": "TEXT", "complemento": "TEXT",
-    "bairro": "TEXT", "cidade": "TEXT", "uf": "TEXT", "lat": "REAL", "lng": "REAL",
-}
+FMT = "%Y-%m-%d %H:%M:%S"
+SENHA_DEMO = "mccrea"  # senha dos usuários de exemplo (@exemplo.com)
 
 # Perfis dos usuários de exemplo: (nascimento, sexo, estado civil, moradores, logradouro, número, bairro, CEP, lat, lng)
 PERFIS_DEMO = {
@@ -34,82 +26,6 @@ PERFIS_DEMO = {
     "hugo@exemplo.com": ("1970-12-01", "Masculino", "Viúvo(a)", 1, "Avenida Adolfo Pinheiro", "700", "Santo Amaro", "04734-001", -23.6480, -46.7030),
 }
 
-
-def dist_km(lat1, lng1, lat2, lng2):
-    """Distância euclidiana no plano (lat, lng). Graus viram km: 1° ≈ 111,32 km,
-    e a longitude é encolhida por cos(latitude) para não distorcer o resultado."""
-    x = (lng2 - lng1) * math.cos(math.radians((lat1 + lat2) / 2))
-    y = lat2 - lat1
-    return 111.32 * math.hypot(x, y)
-
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS usuarios (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nome TEXT NOT NULL,
-  email TEXT NOT NULL UNIQUE,
-  pontos INTEGER NOT NULL DEFAULT 0,
-  criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS funcionarios (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nome TEXT NOT NULL,
-  cargo TEXT NOT NULL CHECK (cargo IN ('coletador', 'tecnico', 'admin')),
-  telefone TEXT
-);
-CREATE TABLE IF NOT EXISTS maquinas (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nome TEXT NOT NULL,
-  endereco TEXT,
-  bairro TEXT,
-  lat REAL NOT NULL,
-  lng REAL NOT NULL,
-  capacidade INTEGER NOT NULL DEFAULT 500,
-  ocupacao INTEGER NOT NULL DEFAULT 0,
-  status TEXT NOT NULL DEFAULT 'ativa' CHECK (status IN ('ativa', 'manutencao', 'inativa')),
-  criada_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS cupons (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  marca TEXT NOT NULL,
-  descricao TEXT NOT NULL,
-  custo INTEGER NOT NULL CHECK (custo > 0),
-  ativo INTEGER NOT NULL DEFAULT 1
-);
-CREATE TABLE IF NOT EXISTS depositos (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
-  maquina_id INTEGER NOT NULL REFERENCES maquinas(id),
-  material TEXT NOT NULL,
-  quantidade INTEGER NOT NULL,
-  pontos INTEGER NOT NULL,
-  criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS resgates (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
-  cupom_id INTEGER NOT NULL REFERENCES cupons(id),
-  codigo TEXT NOT NULL UNIQUE,
-  pontos INTEGER NOT NULL,
-  criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS coletas (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  funcionario_id INTEGER NOT NULL REFERENCES funcionarios(id),
-  maquina_id INTEGER NOT NULL REFERENCES maquinas(id),
-  itens INTEGER NOT NULL,
-  criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS anuncios (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  titulo TEXT NOT NULL,
-  texto TEXT NOT NULL,
-  imagem TEXT NOT NULL,  -- caminho público do cartaz (/static/cartazes/... ou /uploads/anuncios/...)
-  ativo INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1)),
-  ordem INTEGER NOT NULL DEFAULT 0,  -- menor aparece antes no carrossel
-  criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-"""
 
 # Cartazes iniciais do carrossel de Notícias: os slides da apresentação McCrea.pptx,
 # exportados para static/cartazes/mccrea-NN.png (na mesma ordem).
@@ -214,6 +130,7 @@ ANUNCIOS_INICIAIS = [
 
 
 def seed(con):
+    """Popula um banco vazio: máquinas, usuários, funcionários, cupons, depósitos e coletas."""
     rnd = random.Random(7)  # reprodutível
     maquinas = [  # (nome, bairro, lat, lng): locais de exemplo em São Paulo
         ("EcoPonto Paulista", "Bela Vista", -23.5614, -46.6559),
@@ -265,12 +182,8 @@ def seed(con):
             (rnd.randint(1, 2), rnd.randint(1, 10), rnd.randint(80, 300), quando.strftime(FMT)))
 
 
-def migrar(con):
-    """Acrescenta as colunas de cadastro que faltarem e completa os usuários de exemplo."""
-    existentes = {r[1] for r in con.execute("PRAGMA table_info(usuarios)")}
-    for col, tipo in COLUNAS_CADASTRO.items():
-        if col not in existentes:
-            con.execute(f"ALTER TABLE usuarios ADD COLUMN {col} {tipo}")
+def completar_perfis_demo(con):
+    """Completa os usuários de exemplo que ainda não têm senha: perfil, endereço e a senha de demonstração."""
     senha = generate_password_hash(SENHA_DEMO)
     for email, (nasc, sexo, ec, mor, logr, num, bairro, cep, lat, lng) in PERFIS_DEMO.items():
         con.execute(
@@ -281,20 +194,7 @@ def migrar(con):
 
 
 def seed_anuncios(con):
+    """Os 13 cartazes iniciais do carrossel de Notícias (static/cartazes/mccrea-NN.png)."""
     con.executemany("INSERT INTO anuncios (titulo, texto, imagem, ordem) VALUES (?,?,?,?)", [
         (titulo, texto, f"/static/cartazes/mccrea-{i:02d}.png", i)
         for i, (titulo, texto) in enumerate(ANUNCIOS_INICIAIS, start=1)])
-
-
-def init_db():
-    con = sqlite3.connect(DB_PATH)
-    # Os cartazes iniciais entram só quando a tabela é criada; se o admin excluir todos, não voltam.
-    sem_anuncios = not con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'anuncios'").fetchone()
-    con.executescript(SCHEMA)
-    if con.execute("SELECT COUNT(*) FROM maquinas").fetchone()[0] == 0:
-        seed(con)
-    if sem_anuncios:
-        seed_anuncios(con)
-    migrar(con)
-    con.commit()
-    con.close()
