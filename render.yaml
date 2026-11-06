@@ -1,0 +1,18 @@
+# Blueprint da Render: New > Blueprint > escolha este repositório.
+# Plano free: o disco é apagado a cada deploy/reinício, então o SQLite volta aos
+# dados de demonstração (máquinas, cupons, cartazes e usuários de exemplo).
+services:
+  - type: web
+    name: mccrea
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # 1 worker: o SQLite e o seed do banco (feito no import) não aguentam vários processos
+    startCommand: gunicorn app:app --workers 1 --threads 4 --timeout 60 --bind 0.0.0.0:$PORT
+    healthCheckPath: /api/cupons
+    autoDeployTrigger: commit
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_TOKEN
+        generateValue: true

@@ -59,8 +59,13 @@ Ele fornecerá um link público (ex: `https://abcd-1234-efgh.ngrok.io`)
 - ⚠️ Link muda a cada execução
 - ⚠️ Sua máquina precisa estar ligada
 
-#### Opção 3: Deploy em servidor (acesso permanente)
-Hospede em Heroku, AWS, Replit ou similar. Mais profissional, mas requer configuração adicional.
+#### Opção 3: Deploy na Render (acesso permanente)
+O repositório já tem `render.yaml` (Blueprint). Na Render: **New > Blueprint**, escolha este
+repositório e confirme. O `SECRET_KEY` e o `ADMIN_TOKEN` são gerados automaticamente; para ver o
+token do admin, abra o serviço > **Environment**. Cada push no `main` faz um novo deploy.
+- ✅ Link fixo `https://<nome>.onrender.com`, sem precisar da sua máquina ligada
+- ⚠️ Plano free: dorme após 15 min sem acesso (o primeiro acesso leva ~1 min) e o disco é
+  apagado a cada deploy/reinício, então cadastros, pontos e cartazes enviados voltam aos dados de demonstração
 
 ## Estrutura
 

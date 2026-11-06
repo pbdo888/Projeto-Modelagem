@@ -22,6 +22,8 @@ app = Flask(__name__, template_folder=".")  # index.html fica na mesma pasta
 # Assina o cookie de sessão. Sem SECRET_KEY no .env, todos são deslogados a cada reinício.
 app.secret_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)
 app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
+if os.getenv("RENDER"):  # na Render o site é servido só por HTTPS
+    app.config["SESSION_COOKIE_SECURE"] = True
 
 # Cartazes enviados pelo admin (os iniciais ficam em static/cartazes, versionados)
 UPLOAD_ANUNCIOS = os.path.join("uploads", "anuncios")
