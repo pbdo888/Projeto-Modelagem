@@ -11,3 +11,6 @@ uploads/
 __pycache__/
 *.pyc
 .idea/
+
+# testes
+.pytest_cache/
